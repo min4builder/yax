@@ -1,0 +1,131 @@
+typedef struct {
+	Conn c;
+	Conn *conn;
+	Condition recv;
+	Tag tag;
+	Fid fid;
+	off_t off;
+	void *buf;
+} Mux;
+
+void connref(Conn *c)
+void connunref(Conn *c)
+ssize_t connpread(Conn *c, void *data, size_t len, off_t off)
+ssize_t connpwrite(Conn *c, const void *data, size_t len, off_t off)
+ssize_t connread(Conn *c, void *data, size_t len)
+ssize_t connwrite(Conn *c, const void *data, size_t len)
+
+ssize_t muxpread(Mux *c, void *data, size_t len, off_t off)
+{
+	char buf[Treadlen], *bufp = buf;
+	size_t count;
+
+	puthdr(&bufp, Treadlen, Tread, c->tag);
+	putfid(&bufp, c->fid);
+	putoff(&bufp, off);
+	putlen(&bufp, len);
+
+	atomic connwrite(c->conn, buf, Treadlen);
+
+	procwait(&c->recv);
+
+	bufp = c->buf;
+	if(gethdr(&bufp) == Rerror) {
+		free(c->buf);
+		return -1;
+	}
+	count = getlen(&bufp);
+	memcpy(data, bufp, count);
+	free(c->buf);
+	return count;
+}
+ssize_t muxpwrite(Mux *c, const void *data, size_t len, off_t off)
+{
+	char buf[Twriteminlen], *bufp = buf;
+	size_t count;
+
+	puthdr(&bufp, Twriteminlen + len, Twrite, c->tag);
+	putfid(&bufp, c->fid);
+	putoff(&bufp, off);
+	putlen(&bufp, len);
+
+	atomic {
+		connwrite(c->conn, buf, Twriteminlen);
+		connwrite(c->conn, data, len);
+	}
+
+	procwait(&c->recv);
+
+	bufp = c->buf;
+	if(gethdr(&bufp) == Rerror) {
+		free(c->buf);
+		return -1;
+	}
+	count = getlen(&bufp);
+	free(c->buf);
+	return count;
+}
+void muxdel(Mux *c)
+{
+	char buf[Tclunklen], *bufp = buf;
+	puthdr(&bufp, Tclunklen, Tclunk, c->tag);
+	putfid(&bufp, c->fid);
+
+	atomic connwrite(c->conn, buf, Tclunklen);
+
+	procwait(&c->recv);
+
+	free(c->buf);
+	connunref(c->conn);
+	muxmasterclunk(c);
+	free(c);
+}
+
+int vfsopen(const char *name, int fl, [int mode])
+{
+	int fd;
+	char buf[Topenlen], *bufp = buf;
+	Muxmaster *mm, <rooted name> = findmtpt(name);
+	Mux *m = muxnew(mm, name);
+	if(!muxwalk(m, mm->rootfid, <rooted name>))
+		goto bail;
+	puthdr(&bufp, Topenlen, Topen, m->tag);
+	putfid(&bufp, m->fid);
+	put8(&bufp, fl);
+	atomic connwrite(m->conn, buf, Topenlen);
+	procblock(&m->recv);
+	bufp = m->buf;
+	if(gethdr(&bufp) == Rerror) {
+		free(m->buf);
+		goto bail;
+	}
+	free(m->buf);
+	fd = allocfd();
+	fds[fd] = m;
+	return fd;
+bail:
+	connunref(m->conn);
+	muxmasterclunk(m);
+	free(m);
+	return -1;
+}
+
+int vfspoll(int *fds, size_t nfds, clock_t timeout);
+int vfsmount(const char *name, int fd, int fl)
+{
+	char buf[Tversionminlen + 6], *bufp = buf;
+	Muxmaster *mm = malloc(sizeof(Muxmaster));
+	mm->rootfid = 0;
+	mm->conn = fds[fd];
+	mm->muxes = 0;
+	puthdr(&bufp, Tversionminlen + 6, Tversion, ~0);
+	putlen(&bufp, ~0);
+	putstr(&bup, "9P2000");
+	atomic connwrite(mm->conn, buf, Tversionminlen + 6);
+	atomic connread(mm->conn, buf, Tversionminlen + 6);
+	/* whatever */
+	addmtpt(name, mm, fl);
+}
+
+int vfschdir(const char *name);
+

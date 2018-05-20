@@ -1,0 +1,25 @@
+CC=cparser -target i686-yax
+LD=i686-yax-ld
+AR=i686-elf-ar crs
+ASM=nasm -felf32 -g
+CFLAGS=-g -O3 -ffreestanding -I../include
+LDFLAGS=-L. -nostdlib crt0.o crti.o #-T linker.ld -ffreestanding
+LIBS=-lc crtn.o #-lgcc
+
+OBJS=syscall.o exit.o
+
+initrd: testcode.o libc.a crt0.o crti.o crtn.o
+	$(LD) $(LDFLAGS) -o $@ testcode.o $(LIBS)
+
+libc.a: $(OBJS)
+	$(AR) -o $@ $(OBJS)
+
+clean:
+	rm -f *.o *.a initrd
+
+.s.o: $*.s
+	$(ASM) $<
+
+.c.o: $*.c
+	$(CC) $(CFLAGS) -o $@ -c $<
+	

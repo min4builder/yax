@@ -1,0 +1,93 @@
+On boot:
+ - boot:__start
+ - main:kernel_main
+ - multitask:usermode
+
+On syscall:
+ - sysentry:_sysenter
+ - sysentry:_syscall
+ - syscall:sys_<call>
+
+On interrupt:
+ - int:int<n>
+ - One of:
+   - main:page_fault
+     - to be moved to mem
+   - main:interrupt
+     - should be broken up
+   - schedule:procswitch
+   - sysentry:_syscall
+     - when sysenter is not supported, it is simulated
+
+The kernel is roughly divided into 4 parts:
+ - Mem
+   - physmman, ppg
+     - major memory waste (rewrite scheduled)
+   - pgdir
+     - should use invlpg instead of always reloading cr3
+   - virtmman, vpg (depends on physmman and pgdir)
+     - mmap, munmap
+       - should be optimized (rewrite scheduled)
+ - Task
+   - sysentry
+     - usermode
+     - _sysentry (depends on mem)
+     - _syscall
+     - idle
+   - schedule
+     - procrfork, procexits
+     - proclightnew, proclightdel
+     - procsleep, procalarm
+     - proconnotify, procnoted (noted argument currently ignored)
+     - [procnotify] (note pending TODO)
+ - VFS
+   - name (TODO)
+     - mount, open, chdir
+   - conn
+     - connnew, connref, connunref
+       - seem to be working; may have race conditions
+     - connread, connwrite, connseek
+     - connpread, connpwrite
+     - connstat, connwstat
+     - Conn *
+   - mux (TODO)
+     - muxmasternew, muxmasterdel
+     - Muxmaster *
+     - muxnew, muxdel
+     - muxread, muxwrite, muxpread, muxpwrite, muxstat, muxwstat
+     - Mux *
+   - pipe
+     - pipenew, pipedel
+     - piperead, pipewrite
+       - seem to be working; not a very good wait implementation; probably has race conditions
+     - pipestat, pipewstat
+       - hopefully working; untested
+     - Pipe *
+ - Misc
+   - exec (depends on mem)
+     - exec (syscall TODO)
+   - malloc (dlmalloc, depends on mem)
+   - libk
+   - ssp
+   - int
+   - printk
+     - __printk (to be replaced by /dev/printk)
+     - __cprintk (to be removed)
+   - pic
+   - pit
+   - port
+
+TODO (in rough order of priority)
+ - implement opens
+ - implement mux
+ - implement /dev/printk
+ - implement /dev/irq
+ - implement /dev/port
+ - implement exec
+ - implement note pending
+ - implement /proc
+ - fix physmman's memory waste
+ - make virtmman faster
+   - implement CoW
+ - use invlpg
+

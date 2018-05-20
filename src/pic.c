@@ -1,0 +1,28 @@
+#include <stdint.h>
+#include "port.h"
+#include "pic.h"
+
+void piceoi(int irq)
+{
+	outb(0x20, 0x20);
+	if(irq > 7)
+		outb(0xa0, 0x20);
+}
+
+void picinit(void)
+{
+	uint8_t m1, m2;
+	m1 = inb(0x21);
+	m2 = inb(0xa1);
+	outb(0x20, 0x11);
+	outb(0xa0, 0x11);
+	outb(0x21, 0x20);
+	outb(0xa1, 0x28);
+	outb(0x21, 4);
+	outb(0xa1, 2);
+	outb(0x21, 1);
+	outb(0xa1, 1);
+	outb(0x21, m1);
+	outb(0xa1, m2);
+}
+

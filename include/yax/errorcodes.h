@@ -1,0 +1,22 @@
+#ifndef _ERRORCODES_H
+#define _ERRORCODES_H
+
+enum {
+	ENOSYS = 1,
+	EACCES,
+	EAGAIN,
+	EBADF,
+	EINVAL,
+	EMFILE,
+	ENODEV,
+	ENOEXEC,
+	ENOMEM,
+	ENOTSUP,
+	ENXIO,
+	EOVERFLOW,
+	ESRCH,
+	MAXERR
+};
+
+#endif /* _ERRORCODES_H */
+

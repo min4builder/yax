@@ -1,0 +1,12 @@
+#!/bin/sh
+
+quote() {
+	echo "$1" | sed "s/'/'\\''/;1s/^/'/;\$s/\$/'/"
+}
+
+exec 3>config.sh
+
+echo >&3 "YAX_PREFIX=$(quote "$PWD/sysroot")"
+echo >&3 "PATH=\"\$YAX_PREFIX/bin:\${PATH#\$YAX_PREFIX/bin:}\""
+echo >&3 "YAX_ARCH=i686"
+

@@ -1,0 +1,149 @@
+global usermode:function (usermode.end - usermode)
+global idle:function (idle.end - idle)
+global _sysenter:function (_sysenter.end - _sysenter)
+global _syscall:function (_syscall.end - _syscall)
+extern verusrptr
+extern sys_exits
+extern sys_rfork
+extern sys_test
+extern sys_mmap
+extern sys_munmap
+extern sys_notify
+extern sys_noted
+extern sys_sleep
+extern sys_alarm
+extern sys_close
+extern sys_pread
+extern sys_pwrite
+extern sys_read
+extern sys_write
+extern sys_seek
+extern sys_dup2
+extern sys_pipe
+extern sys_fd2path
+extern sys_fstat
+extern sys_fwstat
+
+extern sys_printk
+extern sys_cprintk
+
+callbytes equ 7*4 ; XXX update this
+
+section .text
+usermode:
+	mov ax, 0x23
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+	mov eax, [esp+4]
+	mov ecx, [esp+8]
+	push dword 0x23
+	push ecx
+	pushfd
+	push dword 0x1b
+	push eax
+	iret
+.end:
+idle: ; wait till next interrupt
+	sti
+.loop:
+	hlt
+	ret
+.end:
+_sysenter:
+	pushfd
+	cld
+	sti
+	push gs
+	push fs
+	push es
+	push ds
+	push edx
+	push ecx
+	push eax
+
+	mov ax, 0x10
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov gs, ax
+
+	call _syscall
+
+	add esp, 4
+	pop ecx
+	pop edx
+	pop ds
+	pop es
+	pop fs
+	pop gs
+	or dword [esp], 1 << 9 ; enable EFLAGS.IF
+	popfd
+	sysexit
+.end:
+
+_syscall:
+	mov eax, [esp+8] ; user esp
+	push dword 1 ; PROT_READ
+	push dword callbytes
+	push eax
+	call verusrptr
+	add esp, 12
+	mov ecx, eax
+	mov eax, [esp+4] ; call number
+	test ecx, ecx
+	jz .inval
+
+	mov ecx, callbytes
+	mov esi, [esp+8] ; user esp
+	lea edi, [esp-callbytes]
+	rep movsb
+	sub esp, callbytes
+
+	cmp eax, (calltable.end - calltable) / 4
+	jae .nocall
+	mov eax, [calltable+eax*4]
+	jz .nocall
+	call eax
+	add esp, callbytes
+	ret
+.nocall:
+	add esp, callbytes
+.inval:
+	mov eax, -1 ; -ENOSYS
+	ret
+.end:
+
+section .rodata
+calltable:
+	dd sys_exits
+	dd sys_rfork
+	dd sys_printk ;sys_exec
+	dd sys_test ; unused
+	dd sys_mmap
+	dd sys_munmap
+	dd sys_notify
+	dd sys_cprintk ; currently unused
+	dd sys_noted
+	dd sys_sleep
+	dd sys_alarm
+	dd 0 ;sys_open
+	dd sys_close
+	dd sys_pread
+	dd sys_pwrite
+	dd sys_read
+	dd sys_write
+	dd sys_seek
+	dd sys_dup2
+	dd 0 ;sys_poll
+	dd 0 ;sys_chdir
+	dd sys_pipe
+	dd 0 ;sys_mount
+	dd sys_fd2path
+	dd 0 ;sys_stat
+	dd sys_fstat
+	dd 0 ;sys_wstat
+	dd sys_fwstat
+.end:
+
