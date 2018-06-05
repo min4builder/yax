@@ -1,23 +1,36 @@
 On boot:
  - boot:__start
+   - set up paging, segmentation
  - main:kernel_main
+   - set up kernel subsystems
+   - set up first process
  - multitask:usermode
+   - jump to initrd (which is an executable)
 
 On syscall:
+(SYSV calling convention with syscall instruction in place of call,
+ECX as ESP to restore, EDX as return address)
  - sysentry:_sysenter
+   - proxy; just calls _syscall
  - sysentry:_syscall
+   - copies the arguments to the kernel stack and dispatches call
  - syscall:sys_<call>
+   - syscall handlers; verify arguments and call kernel function to do the job
 
 On interrupt:
  - int:int<n>
- - One of:
+   - most get ignored
+ - or one of:
    - main:page_fault
      - to be moved to mem
    - main:interrupt
+     - deals with IRQs
+     - just prints debugging info on the screen
      - should be broken up
    - schedule:procswitch
+     - the name has absolutely nothing to do with the function's function
    - sysentry:_syscall
-     - when sysenter is not supported, it is simulated
+     - when sysenter is not supported, it is simulated through this
 
 The kernel is roughly divided into 4 parts:
  - Mem
@@ -59,13 +72,21 @@ The kernel is roughly divided into 4 parts:
    - pipe
      - pipenew, pipedel
      - piperead, pipewrite
-       - seem to be working; not a very good wait implementation; probably has race conditions
+       - seem to be working
+       - not a very good wait implementation
+       - probably has race conditions
      - pipestat, pipewstat
        - hopefully working; untested
      - Pipe *
  - Misc
    - exec (depends on mem)
      - exec (syscall TODO)
+       - ELF format
+       - calls the entry point with a stack set up, SYSV calling convention:
+         - (NORETURN) _start(char *argv, char *envp)
+         - the return value doesn't point to anything interesting
+         - argv and envp are single strings; the libc should split them
+           according to some convention
    - malloc (dlmalloc, depends on mem)
    - libk
    - ssp
@@ -90,4 +111,5 @@ TODO (in rough order of priority)
  - make virtmman faster
    - implement CoW
  - use invlpg
+ - make it fit in a floppy
 

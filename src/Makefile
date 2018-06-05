@@ -1,13 +1,13 @@
-CC=cparser -target i686-elf
-#CC=i686-elf-gcc -fstack-protector-all
-LD=i686-elf-ld
-#LD=$(CC) -ffreestanding
+#CC=cparser -target i686-elf
+CC=i686-elf-gcc -fstack-protector-all
+#LD=i686-elf-ld
+LD=$(CC) -ffreestanding
 ASM=nasm -felf32 -g
 CFLAGS=-g -O3 -Wall -Wextra -pedantic
 LDFLAGS=
-CFLAGS+=-I../include -std=c89 -ffreestanding
+CFLAGS+=-I../include -std=c99 -ffreestanding
 LDFLAGS+=-T linker.ld -nostdlib
-#LIBS=-lgcc
+LIBS=-lgcc
 
 # boot.o must be first
 OBJS=boot.o \

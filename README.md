@@ -1,6 +1,6 @@
 # YAX
 A small, preemptively-multitasking, 32-bit x86 operating system kernel.
-(The name means Yet Another Unix).
+(The name means Yet Another uniX).
 ## The idea
 Write a Unix-like microkernel with a Plan 9-inspired VFS as IPC.
 I hope it works.
