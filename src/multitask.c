@@ -30,6 +30,9 @@ static Proc *procbypid = 0;
 static Proc *nullproc = 0;
 static Sleep *sleeping = 0;
 
+#define CRITSEC MACRO_DECLARE_(int ints_were_enabled_) MACRO_WRAP_(ints_were_enabled_ = entercs(), leavecs(ints_were_enabled_))
+#define LEAVECS leavecs(ints_were_enabled_)
+
 static int entercs(void)
 {
 	int i = intoff();
@@ -102,98 +105,95 @@ void timer_handler(void)
 void *procswitchgut(void *sp)
 {
 	Proc *prev;
-	int i = entercs();
-	printk("procswitch()\n");
-	curproc->quantum = curproc->priority;
-	curproc->sp = sp;
-	prev = curproc;
-	curproc = curproc->next;
-	/* if the next one is the null task, skip it;
-	 * if *that* one is also the null task, we've got nothing else to do,
-	 * therefore, we run the null task anyways. */
-	if(curproc == nullproc) {
+	CRITSEC {
+		printk("procswitch()\n");
+		curproc->quantum = curproc->priority;
+		curproc->sp = sp;
+		prev = curproc;
 		curproc = curproc->next;
+		/* if the next one is the null task, skip it;
+		 * if *that* one is also the null task, we've got nothing else to do,
+		 * therefore, we run the null task anyways. */
+		if(curproc == nullproc) {
+			curproc = curproc->next;
+		}
+		prev->pd = switchpgdir(curproc->pd);
+		prev->syscallstack = switchsyscallstack(curproc->syscallstack);
 	}
-	prev->pd = switchpgdir(curproc->pd);
-	prev->syscallstack = switchsyscallstack(curproc->syscallstack);
-	leavecs(i);
 	return curproc->sp;
 }
 
 void condwait(Condition *c)
 {
 	Proc *p;
-	int i = entercs();
-	if(c->waiter) {
-		printk("DOUBLE WAIT: ");
-		iprintk(c->waiter->pid);
-		cprintk(' ');
-		iprintk(curproc->pid);
-		cprintk('\n');
-		halt();
+	CRITSEC {
+		if(c->waiter) {
+			printk("DOUBLE WAIT: ");
+			iprintk(c->waiter->pid);
+			cprintk(' ');
+			iprintk(curproc->pid);
+			cprintk('\n');
+			halt();
+		}
+		if(c->done) {
+			c->done = 0;
+			LEAVECS;
+			return;
+		}
+		c->waiter = curproc;
+		if(!curproc->blocked && !curproc->blocked2)
+			curproc->blocked = c;
+		else if(!curproc->blocked2)
+			curproc->blocked2 = c;
+		else {
+			printk("TRIPLE BLOCK: ");
+			iprintk(curproc->pid);
+			cprintk('\n');
+			halt();
+		}
+		p = findprev(curproc);
+		p->next = curproc->next;
 	}
-	if(c->done) {
-		c->done = 0;
-		lockunlock(&c->l);
-		if(i)
-			inton();
-		return;
-	}
-	c->waiter = curproc;
-	if(!curproc->blocked && !curproc->blocked2)
-		curproc->blocked = c;
-	else if(!curproc->blocked2)
-		curproc->blocked2 = c;
-	else {
-		printk("TRIPLE BLOCK: ");
-		iprintk(curproc->pid);
-		cprintk('\n');
-		halt();
-	}
-	p = findprev(curproc);
-	p->next = curproc->next;
-	leavecs(i);
 	procswitch();
 }
 
 void condsignal(Condition *c)
 {
-	int i = entercs();
-	if(c->done) {
-		printk("DOUBLE SIGNAL: ");
-		iprintk(curproc->pid);
-		cprintk('\n');
-		halt();
-	}
-	if(c->waiter) {
-		if(c->waiter->blocked != c && c->waiter->blocked2 != c) {
-			printk("BLOCKING INCONSISTENCY: ");
-			iprintk(c->waiter->pid);
-			cprintk(' ');
-			uxprintk((uintptr_t) c->waiter->blocked);
+	CRITSEC {
+		if(c->done) {
+			printk("DOUBLE SIGNAL: ");
+			iprintk(curproc->pid);
 			cprintk('\n');
 			halt();
 		}
-		if(!(c->waiter->blocked == c && c->waiter->blocked2 != 0)) {
-			c->waiter->next = curproc->next;
-			curproc->next = c->waiter;
+		if(c->waiter) {
+			if(c->waiter->blocked != c && c->waiter->blocked2 != c) {
+				printk("BLOCKING INCONSISTENCY: ");
+				iprintk(c->waiter->pid);
+				cprintk(' ');
+				uxprintk((uintptr_t) c->waiter->blocked);
+				cprintk('\n');
+				halt();
+			}
+			if(!(c->waiter->blocked == c && c->waiter->blocked2 != 0)) {
+				c->waiter->next = curproc->next;
+				curproc->next = c->waiter;
+			}
+			if(c->waiter->blocked == c)
+				c->waiter->blocked = 0;
+			else if(c->waiter->blocked2 == c)
+				c->waiter->blocked2 = 0;
+			c->waiter = 0;
+		} else {
+			c->done = 1;
 		}
-		if(c->waiter->blocked == c)
-			c->waiter->blocked = 0;
-		else if(c->waiter->blocked2 == c)
-			c->waiter->blocked2 = 0;
-		c->waiter = 0;
-	} else {
-		c->done = 1;
 	}
-	leavecs(i);
 }
 
 pid_t procrforkgut(void *sp, enum rfflags fl)
 {
 	static int nextpid = 1;
 	Proc *p;
-	int i;
 	Proc *new = calloc(1, sizeof(Proc));
 	new->pid = nextpid++; /* XXX FIXME XXX */
 	new->parent = curproc;
@@ -211,20 +211,20 @@ pid_t procrforkgut(void *sp, enum rfflags fl)
 	memcpy(new->sp, sp, (uint8_t *) curproc->syscallstack - (uint8_t *) sp);
 	RFORKREGADJUST(new->sp, curproc->syscallstack, new->syscallstack);
 
-	i = entercs();
-	if(fl & RFFDG)
-		new->fds = fdlistcopy(curproc->fds);
-	else {
-		fdlistref(curproc->fds);
-		new->fds = curproc->fds;
-	}
+	CRITSEC {
+		if(fl & RFFDG)
+			new->fds = fdlistcopy(curproc->fds);
+		else {
+			fdlistref(curproc->fds);
+			new->fds = curproc->fds;
+		}
 
-	new->next = curproc->next;
-	curproc->next = new;
-	for(p = procbypid; p->nextpid && p->nextpid->pid < new->pid; p = p->nextpid) {}
-	new->nextpid = p->nextpid;
-	p->nextpid = new;
-	leavecs(i);
+		new->next = curproc->next;
+		curproc->next = new;
+		for(p = procbypid; p->nextpid && p->nextpid->pid < new->pid; p = p->nextpid) {}
+		new->nextpid = p->nextpid;
+		p->nextpid = new;
+	}
 
 	return new->pid;
 }
@@ -280,7 +280,6 @@ void procexitsgut2(Proc *cp)
 
 void proclightnew(void (*f)(void *), void *arg)
 {
-	int i;
 	Proc *new = calloc(1, sizeof(Proc));
 	Regs r;
 	new->pid = 0;
@@ -301,10 +300,10 @@ void proclightnew(void (*f)(void *), void *arg)
 	r.ebp = 0;
 	STACKPUSH(new->sp, &r, sizeof(Regs));
 
-	i = entercs();
-	new->next = curproc->next;
-	curproc->next = new;
-	leavecs(i);
+	CRITSEC {
+		new->next = curproc->next;
+		curproc->next = new;
+	}
 }
 
 /* proclightexit is in asmschedule.s:
@@ -341,31 +340,31 @@ static void sleepalarm(clock_t time, int a)
 {
 	Sleep **cs, *ns = calloc(1, sizeof(Sleep));
 	clock_t totaltime = 0;
-	int i = entercs();
-	for(cs = &sleeping;; cs = &(*cs)->next) {
-		if(!*cs) {
-			ns->time = time - totaltime;
-			ns->next = 0;
-			*cs = ns;
-			break;
+	CRITSEC {
+		for(cs = &sleeping;; cs = &(*cs)->next) {
+			if(!*cs) {
+				ns->time = time - totaltime;
+				ns->next = 0;
+				*cs = ns;
+				break;
+			}
+			totaltime += (*cs)->time;
+			if(totaltime >= time) {
+				ns->time = time - (totaltime - (*cs)->time);
+				(*cs)->time -= totaltime - time;
+				ns->next = *cs;
+				*cs = ns;
+				break;
+			}
 		}
-		totaltime += (*cs)->time;
-		if(totaltime >= time) {
-			ns->time = time - (totaltime - (*cs)->time);
-			(*cs)->time -= totaltime - time;
-			ns->next = *cs;
-			*cs = ns;
-			break;
+		if(a) {
+			ns->tag = SALARM;
+			ns->u.p = curproc;
+			LEAVECS;
+			return;
 		}
+		ns->tag = SSLEEP;
 	}
-	if(a) {
-		ns->tag = SALARM;
-		ns->u.p = curproc;
-		leavecs(i);
-		return;
-	}
-	ns->tag = SSLEEP;
-	leavecs(i);
 	condwait(&ns->u.c);
 }
 
@@ -388,7 +387,6 @@ void prochandle();
 void *prochandlegut(Regs *r, const char *note)
 {
 	Proc *p;
-	int i;
 	void *ns, *nsp, *notead, *regsad, *oldsp = curproc->handling;
 	size_t nlen = strlen(note) + 1;
 
@@ -418,15 +416,16 @@ void *prochandlegut(Regs *r, const char *note)
 		}
 	}
 
-	i = entercs();
-	curproc->handling = 0;
-	if(curproc->blocked) {
-		p = findprev(curproc);
-		p->next = curproc->next;
-		leavecs(i);
-		procswitch();
-	} else
-		leavecs(i);
+	CRITSEC {
+		curproc->handling = 0;
+		if(curproc->blocked) {
+			p = findprev(curproc);
+			p->next = curproc->next;
+			LEAVECS;
+			procswitch();
+			continue;
+		}
+	}
 	return oldsp;
 }
 
@@ -446,45 +445,43 @@ static void notify(Proc *p, const char *note)
 {
 	Regs r;
 	void *sp, *snote;
-	int i = entercs();
+	CRITSEC {
+		iprintk(curproc->pid);
+		printk(": procnotify(");
+		iprintk(p->pid);
+		printk(", ");
+		printk(note);
+		printk(")\n");
 
-	iprintk(curproc->pid);
-	printk(": procnotify(");
-	iprintk(p->pid);
-	printk(", ");
-	printk(note);
-	printk(")\n");
+		if(p->handling) {
+			LEAVECS;
+			printk("notifying impossible ATM\n");
+			return;
+		}
 
-	if(p->handling) {
-		leavecs(i);
-		printk("notifying impossible ATM\n");
-		return;
+		if(p == curproc) {
+			LEAVECS;
+			prochandlegut(0, note);
+			return;
+		}
+
+		p->handling = sp = p->sp;
+		STACKPEEK(p->sp, &r, sizeof(Regs));
+		snote = STACKPUSH(p->sp, note, strlen(note) + 1);
+		STACKPUSH(p->sp, &snote, sizeof(void *));
+		STACKPUSH(p->sp, &sp, sizeof(void *));
+
+		r.eip = (uintptr_t) prochandle;
+		r.cs = 0x08;
+		r.ds = r.es = r.fs = r.gs = 0x10;
+		r.eflags = 0x202;
+		STACKPUSH(p->sp, &r, sizeof(Regs));
+
+		if(p->blocked) {
+			p->next = curproc->next;
+			curproc->next = p;
+		}
 	}
-
-	if(p == curproc) {
-		leavecs(i);
-		prochandlegut(0, note);
-		return;
-	}
-
-	p->handling = sp = p->sp;
-	STACKPEEK(p->sp, &r, sizeof(Regs));
-	snote = STACKPUSH(p->sp, note, strlen(note) + 1);
-	STACKPUSH(p->sp, &snote, sizeof(void *));
-	STACKPUSH(p->sp, &sp, sizeof(void *));
-
-	r.eip = (uintptr_t) prochandle;
-	r.cs = 0x08;
-	r.ds = r.es = r.fs = r.gs = 0x10;
-	r.eflags = 0x202;
-	STACKPUSH(p->sp, &r, sizeof(Regs));
-
-	if(p->blocked) {
-		p->next = curproc->next;
-		curproc->next = p;
-	}
-
-	leavecs(i);
 }
 
 void procnotify(int pid, const char *note)
