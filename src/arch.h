@@ -2,6 +2,7 @@
 #define _ARCH_H
 
 #include <stdint.h>
+#include <yax/errorcodes.h>
 #include "boot.h"
 
 #define PGCNT ((unsigned int) 1 << 20)
@@ -24,16 +25,18 @@ typedef struct {
 	uint16_t ss;
 } Regs;
 
-#define SYSRETURN(r, val) ((r)->eax = (uint32_t) (val))
-#define SYSRETURNPTR(r, val) SYSRETURN(r, val)
-#define SYSRETURN64(r, val) ((r)->eax = (uint32_t) (val), (r)->edx = (uint32_t) ((uint64_t) (val) >> 32))
-
 #define SWITCHSYSCALLSTACK(ks) (switchsyscallstack_(ks))
 
 #define RFORKREGADJUST(sp, cur, new) (((Regs *) sp)->ebp += (uint8_t *) (new) - (uint8_t *) (cur))
 
 #define STACKPUSH(sp, ptr, len) memcpy(*(char **)&(sp) -= (len), (ptr), (len))
 #define STACKPEEK(sp, ptr, len) ((void)memcpy((ptr), (sp), (len)))
+
+#define PTRERR(p) ((int32_t) (p) > -MAXERR && (int32_t) (p) < 0)
+#define PTR2ERR(p) ((int32_t) (p))
+#define ERR2PTR(e) ((void *) (e))
+
+#define PTRLEN 32
 
 #endif /* _ARCH_H */
 

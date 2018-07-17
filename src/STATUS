@@ -28,7 +28,7 @@ On interrupt:
      - just prints debugging info on the screen
      - should be broken up
    - schedule:procswitch
-     - the name has absolutely nothing to do with the function's function
+     - the name likely has absolutely nothing to do with the function's function
    - sysentry:_syscall
      - when sysenter is not supported, it is simulated through this
 
@@ -41,6 +41,8 @@ The kernel is roughly divided into 4 parts:
    - virtmman, vpg (depends on physmman and pgdir)
      - mmap, munmap
        - should be optimized (rewrite scheduled)
+     - verusrbuf, verusrstr
+     - usrmemget, usrmemmap (WIP)
  - Task
    - sysentry
      - usermode
@@ -54,62 +56,63 @@ The kernel is roughly divided into 4 parts:
      - proconnotify, procnoted (noted argument currently ignored)
      - [procnotify] (note pending TODO)
  - VFS
-   - name (TODO)
-     - mount, open, chdir
+   - name
+     - vfsopen
+     - vfsgetfid
+     - vfsmount
+     - vfschdir
+       - string ownership issues
    - conn
-     - connnew, connref, connunref
-       - seem to be working; may have race conditions
+     - Conn *
+     - connnew, conndup
+     - connopen, connwalk
      - connread, connwrite, connseek
      - connpread, connpwrite
      - connstat, connwstat
-     - Conn *
-   - mux (TODO)
-     - muxmasternew, muxmasterdel
-     - Muxmaster *
-     - muxnew, muxdel
-     - muxread, muxwrite, muxpread, muxpwrite, muxstat, muxwstat
-     - Mux *
-   - pipe
-     - pipenew, pipedel
-     - piperead, pipewrite
-       - seem to be working
-       - not a very good wait implementation
-       - probably has race conditions
-     - pipestat, pipewstat
-       - hopefully working; untested
+   - iofs (Conn implementation) (TODO)
+     - iofsnew
+   - irqfs (Conn implementation) (TODO)
+     - irqfsnew
+   - mnt (Conn implementation) (WIP)
+     - mntnew
+   - printkfs (Conn implementation)
+     - printkfsnew
+     - seems to be working, probably has race conditions
+   - pipe (Conn implementation)
      - Pipe *
+     - pipenew
+     - seems to be working, probably has race conditions
  - Misc
    - exec (depends on mem)
      - exec (syscall TODO)
        - ELF format
        - calls the entry point with a stack set up, SYSV calling convention:
          - (NORETURN) _start(char *argv, char *envp)
-         - the return value doesn't point to anything interesting
+         - the return address doesn't point to anything interesting
          - argv and envp are single strings; the libc should split them
            according to some convention
-   - malloc (dlmalloc, depends on mem)
+   - malloc (dlmalloc, almost 50% of the code; depends on mem)
    - libk
    - ssp
    - int
    - printk
-     - __printk (to be replaced by /dev/printk)
-     - __cprintk (to be removed)
    - pic
    - pit
    - port
 
 TODO (in rough order of priority)
- - implement opens
- - implement mux
- - implement /dev/printk
- - implement /dev/irq
- - implement /dev/port
+ - console driver
+ - get a filesystem working
  - implement exec
- - implement note pending
+ - hd driver
+ - get more programs working
  - implement /proc
+ - implement note pending
  - fix physmman's memory waste
+ - fix concurrency issues
  - make virtmman faster
    - implement CoW
- - use invlpg
+   - use invlpg
+ - implement SMP
  - make it fit in a floppy
 

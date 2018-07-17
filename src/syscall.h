@@ -18,6 +18,8 @@
 void sys_exits(const char *);
 pid_t sys_rfork(enum rfflags);
 
+int sys_mkmnt(int *);
+
 void *sys_mmap(void *, size_t, enum mapprot, enum mapflags, uint32_t, off_t);
 int sys_munmap(void *, size_t);
 
@@ -45,8 +47,7 @@ ssize_t sys_fstat(int, void *, size_t);
 ssize_t sys_wstat(const char *, const void *, size_t);
 ssize_t sys_fwstat(int, const void *, size_t);
 
-void sys_printk(const char *);
-void sys_cprintk(char);
+int sys_getprintk(void);
 
 void reap(pid_t);
 void wakeup(pid_t);

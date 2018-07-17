@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <yax/mapflags.h>
+#include "ref.h"
 
 enum pgfields {
 	PGPRESENT = 1 << 0,
@@ -15,23 +16,17 @@ enum pgfields {
 
 #define PGADDR 0xfffff000
 
-/* fields inverted because little-endianness */
-typedef /*struct {
-	uint8_t present : 1;
-	uint8_t writable : 1;
-	uint8_t user : 1;
-	uint8_t writethrough : 1;
-	uint8_t cacheoff : 1;
-	uint8_t acc : 1;
-	uint8_t dirty : 1;
-	uint8_t pgsz : 1;
-	uint8_t global : 1;
-	uint8_t noshare : 1;
-	uint8_t avail : 2;
-	uint32_t addr : 20;
-}*/ uint32_t PgEntry;
+typedef uint32_t PgEntry;
 typedef PgEntry PgDir[1024];
 
+typedef struct {
+	RefCounted refcount;
+	unsigned int len;
+	size_t delta;
+	PgEntry *e;
+} PgList;
+
+/* in addition to yax/mapflags.h; internal kernel flag */
 #define PROT_USER 8
 
 PgDir *vpgnew(void);
@@ -43,6 +38,10 @@ void vpgdel(PgDir *);
 
 int verusrptr(const void *, size_t, enum mapprot);
 int verusrstr(const char *, enum mapprot);
+
+PgList *getusrptr(const void *, size_t);
+void *putusrptr(PgList *);
+void freeusrptr(PgList *, void *);
 
 /* actually declared in boot.s; it needs it to be able to enable paging */
 extern PgDir kernel_pd;

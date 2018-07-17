@@ -17,5 +17,6 @@ section .rodata
 failtext: db "Stack check fail", 0
 
 section .data
+; should be generated randomly; don't have RNG in kernel though
 __stack_chk_guard: dd 0xDEADBEEF
 

@@ -5,13 +5,14 @@ global _syscall:function (_syscall.end - _syscall)
 extern verusrptr
 extern sys_exits
 extern sys_rfork
-extern sys_test
+extern sys_mkmnt
 extern sys_mmap
 extern sys_munmap
 extern sys_notify
 extern sys_noted
 extern sys_sleep
 extern sys_alarm
+extern sys_open
 extern sys_close
 extern sys_pread
 extern sys_pwrite
@@ -20,17 +21,18 @@ extern sys_write
 extern sys_seek
 extern sys_dup2
 extern sys_pipe
+extern sys_mountfd
 extern sys_fd2path
 extern sys_fstat
 extern sys_fwstat
 
-extern sys_printk
-extern sys_cprintk
+extern sys_getprintk
 
 callbytes equ 7*4 ; XXX update this
 
 section .text
 usermode:
+	; standard fake interrupt frame stuff
 	mov ax, 0x23
 	mov ds, ax
 	mov es, ax
@@ -52,9 +54,12 @@ idle: ; wait till next interrupt
 	ret
 .end:
 _sysenter:
+	; called on sysenter; set up stuff and call _syscall
 	pushfd
 	cld
 	sti
+	push edi
+	push esi
 	push gs
 	push fs
 	push es
@@ -78,12 +83,15 @@ _sysenter:
 	pop es
 	pop fs
 	pop gs
+	pop esi
+	pop edi
 	or dword [esp], 1 << 9 ; enable EFLAGS.IF
 	popfd
 	sysexit
 .end:
 
 _syscall:
+	; do the argument copying and jump table stuff
 	mov eax, [esp+8] ; user esp
 	push dword 1 ; PROT_READ
 	push dword callbytes
@@ -119,16 +127,16 @@ section .rodata
 calltable:
 	dd sys_exits
 	dd sys_rfork
-	dd sys_printk ;sys_exec
-	dd sys_test ; unused
+	dd 0 ;sys_exec
+	dd sys_mkmnt
 	dd sys_mmap
 	dd sys_munmap
 	dd sys_notify
-	dd sys_cprintk ; currently unused
+	dd sys_getprintk ;sys_iopl
 	dd sys_noted
 	dd sys_sleep
 	dd sys_alarm
-	dd 0 ;sys_open
+	dd sys_open
 	dd sys_close
 	dd sys_pread
 	dd sys_pwrite
@@ -139,7 +147,7 @@ calltable:
 	dd 0 ;sys_poll
 	dd 0 ;sys_chdir
 	dd sys_pipe
-	dd 0 ;sys_mount
+	dd sys_mountfd ;sys_mount
 	dd sys_fd2path
 	dd 0 ;sys_stat
 	dd sys_fstat

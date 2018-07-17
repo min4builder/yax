@@ -3,17 +3,16 @@
 
 #include <sys/types.h>
 #include "conn.h"
+#include "ref.h"
 
 typedef struct {
-	int refcnt;
+	RefCounted refcounted;
 	size_t len;
 	Conn **list;
 } FdList;
 
 FdList *fdlistnew(void);
 FdList *fdlistcopy(FdList *);
-void fdlistref(FdList *);
-void fdlistunref(FdList *);
 
 int fdalloc(Conn *); 
 void fddealloc(int);

@@ -8,14 +8,12 @@ inb:
 	in al, dx
 	ret
 .end:
-
 outb:
 	mov dx, [esp + 4]
 	mov al, [esp + 8]
 	out dx, al
 	ret
 .end:
-
 iowait:
 	xor al, al
 	out 0x80, al

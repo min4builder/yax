@@ -7,8 +7,10 @@
 #include "conn.h"
 #include "exec.h"
 #include "int.h"
+#include "iofs.h"
 #include "libk.h"
 #include "multitask.h"
+#include "name.h"
 #include "pic.h"
 #include "pipe.h"
 #include "pit.h"
@@ -51,7 +53,7 @@ void int_handler(Regs *r, uint8_t n, uint32_t err)
 	uxprintk(r->eip);
 	cprintk('\n');
 	if(n >= 0x20 && n < 0x30) {
-		piceoi(n - 0x20);
+		iofsinterrupt(n - 0x20);
 	} else if(n == 8) {
 		printk("Double fault!\n");
 		printk("IDK what to do! PANIC!!!!\n");
@@ -110,6 +112,7 @@ void kernel_main(MultibootInfo *mbinfo)
 	Module mod;
 	initprintk();
 	if((mbinfo->flags & 0x48) != 0x48 || mbinfo->modn != 1) {
+		/* initrd module missing */
 		printk("Invalid boot\n");
 		return;
 	}
@@ -124,7 +127,6 @@ void kernel_main(MultibootInfo *mbinfo)
 	pitinit();
 	inton();
 
-
 	if(procrfork(RFPROC|RFMEM|RFFDG) != 0)
 		for(;;) idle();
 
@@ -134,9 +136,12 @@ void kernel_main(MultibootInfo *mbinfo)
 		cprintk('\n');
 		halt();
 	}
+	/* exec on kernelland only changes user mappings, we are still running
+	 * here until we change to user mode */
 	/* no need for these anymore */
 	for(i = (unsigned int) mod.start / PGLEN; i <= (unsigned int) mod.end / PGLEN; i++)
 		ppgunref(i);
+	vfsmount("/", iofsnew(), 0); /* TODO check for errors and stuff */
 	usermode(code, (void *) err);
 }
 

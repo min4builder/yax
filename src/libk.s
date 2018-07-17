@@ -3,6 +3,7 @@ global memcpy:function (memcpy.end - memcpy)
 ;global memmove:function (memmove.end - memmove)
 global memcmp:function (memcmp.end - memcmp)
 global strcmp:function (strcmp.end - strcmp)
+global strncmp:function (strncmp.end - strncmp)
 global strlen:function (strlen.end - strlen)
 global strlcpy:function (strlcpy.end - strlcpy)
 
@@ -66,13 +67,36 @@ strcmp:
 	mov esi, [esp+16] ; a
 	mov edi, [esp+12] ; b
 .again:	cmpsb
-	jb .gt
-	jl .st
+	ja .gt
+	jb .st
 	cmp byte [esi], 0
 	jne .again
 	mov eax, 0
 .ret:	pop edi
 	pop esi
+	ret
+.gt:	mov eax, 1
+	jmp .ret
+.st:	mov eax, -1
+	jmp .ret
+.end:
+strncmp:
+	push esi
+	push edi
+	push ecx
+	mov ecx, [esp+24] ; len
+	mov esi, [esp+20] ; a
+	mov edi, [esp+16] ; b
+.again:	cmpsb
+	ja .gt
+	jb .st
+	cmp byte [esi], 0
+	jz .eq
+	loop .again
+.eq:	mov eax, 0
+.ret:	pop edi
+	pop esi
+	pop ecx
 	ret
 .gt:	mov eax, 1
 	jmp .ret

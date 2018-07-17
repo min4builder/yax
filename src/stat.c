@@ -11,6 +11,8 @@ size_t convD2M(Dir *d, char *buf, size_t len)
 	size_t gidlen = strlen(d->gid);
 	size_t muidlen = strlen(d->muid);
 	dlen += namelen + uidlen + gidlen + muidlen;
+	if(!buf)
+		return dlen;
 	if(len < 2)
 		return 0;
 	PBIT16(buf, dlen);
@@ -53,5 +55,6 @@ size_t convD2M(Dir *d, char *buf, size_t len)
 	buf += muidlen;
 	return dlen;
 }
+/* TODO */
 size_t convM2D(char *, size_t, Dir *, char *);
 

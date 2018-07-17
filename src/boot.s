@@ -47,7 +47,7 @@ __start:
 	or ecx, 0x90 ; 4mb pages & global pages
 	mov cr4, ecx
 	mov ecx, cr0
-	or ecx, 0x80000000
+	or ecx, 0x80000000 ; enable paging
 	mov cr0, ecx
 	mov ecx, .higherhalf
 	jmp ecx
@@ -56,7 +56,7 @@ __start:
 	jne halt
 	lidt [idt_desc]
 	lgdt [gdt]
-	mov ax, 0x28
+	mov ax, gdt.tss
 	ltr ax
 	mov ax, gdt.data
 	mov ds, ax
@@ -79,7 +79,7 @@ __start:
 	popfd
 	and eax, 0x200000
 	test eax, eax
-	jz .nosysenter
+	jz .nosysenter ; no cpuid; no sysenter
 	mov eax, 0x01
 	cpuid
 	mov eax, edx
@@ -87,7 +87,7 @@ __start:
 	xor eax, edx
 	test eax, eax
 	jz .nosysenter
-	mov ecx, 0x174
+	mov ecx, 0x174 ; setup sysenter
 	rdmsr
 	mov ax, 0x08
 	wrmsr

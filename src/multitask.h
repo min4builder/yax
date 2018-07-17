@@ -7,18 +7,23 @@
 #include "arch.h"
 #include "fds.h"
 #include "lock.h"
+#include "name.h"
 #include "virtmman.h"
 
 typedef struct Proc Proc;
 
 typedef struct {
 	Lock l;
-	int done;
+	int sem;
 	Proc *waiter;
-} Condition;
+} Sem;
 
-void condwait(Condition *);
-void condsignal(Condition *);
+void seminit(Sem *, int);
+void semwait(Sem *, int);
+void semsignal(Sem *, int);
+
+#define condwait(s) semwait(s, 1)
+#define condsignal(s) semsignal(s, 1)
 
 struct Proc {
 	pid_t pid;
@@ -27,13 +32,17 @@ struct Proc {
 	Proc *parent;
 
 	FdList *fds;
+	char *cwd; /* TODO make this CoW reference counted */
+	MountTab *mounttab;
 
 	char exitstring[ERRLEN];
 
 	void *handling;
 	void (*handler)(void *, const char *);
-	Condition *blocked;
-	Condition *blocked2;
+	Sem *blocked;
+	int blockedn;
+	Sem *blocked2;
+	int blockedn2;
 
 	PgDir *pd;
 	void *sp;
@@ -41,6 +50,7 @@ struct Proc {
 	void *kstack;
 
 	Proc *next;
+	Proc *bnext;
 	Proc *nextpid;
 };
 

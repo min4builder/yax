@@ -3,10 +3,10 @@ LD=i686-yax-ld
 AR=i686-elf-ar crs
 ASM=nasm -felf32 -g
 CFLAGS=-g -O3 -ffreestanding -I../include
-LDFLAGS=-L. -nostdlib crt0.o crti.o #-T linker.ld -ffreestanding
+LDFLAGS=-L. -nostdlib crt0.o crti.o -T linker.ld #-ffreestanding
 LIBS=-lc crtn.o #-lgcc
 
-OBJS=syscall.o exit.o
+OBJS=exit.o malloc.o memcpy.o memset.o strcmp.o syscall.o
 
 initrd: testcode.o libc.a crt0.o crti.o crtn.o
 	$(LD) $(LDFLAGS) -o $@ testcode.o $(LIBS)

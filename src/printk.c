@@ -21,21 +21,38 @@ void cprintk(char c)
 	outb(PORT, c);
 }
 
+static void pcprintk(char c)
+{
+	if(c >= ' ' && c < 0x7F || c == '\n')
+		cprintk(c);
+	else {
+		cprintk('\\');
+		cprintk('0' + (c >> 6));
+		cprintk('0' + ((c >> 3) & 07));
+		cprintk('0' + (c & 07));
+	}
+}
+
 void nprintk(int n, const char *s)
 {
 	int i;
 	for(i = 0; i < n; i++)
-		cprintk(s[i]);
+		pcprintk(s[i]);
 }
 
 void iprintk(int n)
 {
 	char num[16]; /* FIXME: should be enough */
 	int cpos = 15;
+	int negative = n < 0;
+	if(negative)
+		n = -n;
 	do {
 		num[cpos--] = '0' + n % 10;
 		n /= 10;
 	} while(cpos >= 0 && n);
+	if(negative)
+		num[cpos--] = '-';
 	nprintk(16 - cpos - 1, num + cpos + 1);
 }
 
@@ -72,10 +89,21 @@ void uxprintk(unsigned int n)
 	nprintk(16 - cpos - 1, num + cpos + 1);
 }
 
+void ubprintk(unsigned int n)
+{
+	char num[32]; /* FIXME: should be enough */
+	int cpos = 31;
+	do {
+		num[cpos--] = '0' + (n & 1);
+		n >>= 1;
+	} while(cpos >= 0 && n);
+	nprintk(32 - cpos - 1, num + cpos + 1);
+}
+
 void printk(const char *s)
 {
 	int i;
 	for(i = 0; s[i]; i++)
-		cprintk(s[i]);
+		pcprintk(s[i]);
 }
 

@@ -9,6 +9,7 @@ void iprintk(int n);
 void uiprintk(unsigned int n);
 void xprintk(int n);
 void uxprintk(unsigned int n);
+void ubprintk(unsigned int n);
 void cprintk(char c);
 
 #endif /* _PRINTK_H */

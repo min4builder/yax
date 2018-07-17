@@ -4,11 +4,15 @@
 #include "arch.h"
 #include "boot.h"
 #include "libk.h"
+#include "malloc.h"
 #include "pgdir.h"
 #include "physmman.h"
 #include "printk.h"
+#include "ref.h"
 #include "virtmman.h"
 
+/* all code related to page directories; physical memory allocation is in
+ * phymman.c */
 static void *spg = (void *) (SPG * PGLEN);
 
 static void map(unsigned int pg, unsigned int addr, int prot, int noshare);
@@ -30,24 +34,24 @@ PgDir *vpgcopy(int memshare)
 	unsigned int i, j;
 	PgDir *ppd = vpgnew();
 	for(i = 0; i < ((unsigned int) VIRT(0) / PGLEN) / 1024; i++) {
+		PgDir *pt = PT(i);
 		if(!((*PGDIR)[i] & PGPRESENT))
 			continue;
 		map(SPG, (unsigned int) ppd / PGLEN, PROT_READ | PROT_WRITE, 1);
 		(*(PgDir *)spg)[i] = (*PGDIR)[i] & ~PGADDR;
 		(*(PgDir *)spg)[i] |= ppgalloc() << 12;
+		map(SPG, (*(PgDir *)spg)[i] >> 12, PROT_READ | PROT_WRITE, 1);
 		for(j = 0; j < 1024; j++) {
-			PgDir *pt = PT(i);
 			if(!((*pt)[j] & PGPRESENT))
 				continue;
 			if((*pt)[j] & PGNOSHARE || (!memshare && (*pt)[j] & PGWRITEABLE)) {
 				unsigned int p = ppgalloc();
-				map(SPG, (*(PgDir *)spg)[i] >> 12, PROT_READ | PROT_WRITE, 1);
 				(*(PgDir *)spg)[j] = (*pt)[j] & ~PGADDR;
 				(*(PgDir *)spg)[j] |= p << 12;
 				map(SPG, p, PROT_READ | PROT_WRITE, 1);
 				memcpy(spg, (void *) ((i * 1024 + j) * PGLEN), PGLEN);
-			} else {
 				map(SPG, (*(PgDir *)spg)[i] >> 12, PROT_READ | PROT_WRITE, 1);
+			} else {
 				(*(PgDir *)spg)[j] = (*pt)[j];
 				ppgref((*pt)[j] >> 12);
 			}
@@ -57,20 +61,15 @@ PgDir *vpgcopy(int memshare)
 	return ppd;
 }
 
-static void ensurepdmap(unsigned int pg)
+static void map(unsigned int pg, unsigned int addr, int prot, int noshare)
 {
+	PgDir *pt;
 	if(!((*PGDIR)[pg / 1024] & PGPRESENT)) {
 		unsigned int p = ppgalloc();
 		(*PGDIR)[pg / 1024] = p << 12 | PGUSER | PGWRITEABLE | PGPRESENT;
 		ptinval(pg / 1024);
 		pginval((unsigned int) PT(pg / 1024) / PGLEN);
 	}
-}
-
-static void map(unsigned int pg, unsigned int addr, int prot, int noshare)
-{
-	PgDir *pt;
-	ensurepdmap(pg);
 	pt = PT(pg / 1024);
 	(*pt)[pg % 1024] = addr << 12
 		| (noshare ? PGNOSHARE : 0)
@@ -209,8 +208,61 @@ int verusrstr(const char *s, enum mapprot prot)
 	do {
 		if(!verusrpage((unsigned int) s / PGLEN, prot))
 			return 0;
-		s++;
-	} while(*s != '\0');
+	} while(*s++ != '\0');
 	return 1;
+}
+
+static void freeup(const RefCounted *rc)
+{
+	PgList *pl = rc;
+	unsigned int i;
+	for(i = 0; i < pl->len; i++)
+		ppgunref(pl->e[i]);
+	free(pl);
+}
+
+PgList *getusrptr(const void *p, size_t len)
+{
+	unsigned int npgs = (len + PGLEN - 1) / PGLEN;
+	unsigned int pgs = (unsigned int) p / PGLEN;
+	unsigned int i;
+	PgDir *pt;
+	PgList *pl = calloc(1, sizeof(PgList) + sizeof(PgEntry) * npgs);
+	pl->e = (char *) pl + sizeof(PgList);
+	mkref(pl, freeup);
+	pl->len = npgs;
+	pl->delta = (char *) p - (char *) (pgs * PGLEN);
+	for(i = pgs; i < pgs + npgs; i++) {
+		pt = PT(i / 1024);
+		pl->e[i - pgs] = (*pt)[i % 1024] >> 12;
+		ppgref(pl->e[i - pgs]);
+	}
+	return pl;
+}
+
+void *putusrptr(PgList *pl)
+{
+	unsigned int npgs = pl->len;
+	unsigned int pgs = findpgs(PGDIR, npgs, 1);
+	unsigned int i;
+	if(pgs == 0)
+		return 0;
+	ref(pl);
+	for(i = pgs; i < pgs + npgs; i++)
+		map(i, pl->e[i - pgs], PROT_USER | PROT_READ | PROT_WRITE, 1);
+	return (void *) (pgs * PGLEN + pl->delta);
+}
+
+void freeusrptr(PgList *pl, void *p)
+{
+	unsigned int npgs = pl->len;
+	unsigned int pgs = (unsigned int) p / PGLEN;
+	unsigned int i;
+	for(i = pgs; i < pgs + npgs; i++) {
+		unsigned int p = unmap(i);
+		if(p)
+			ppgunref(p);
+	}
+	unref(pl);
 }
 

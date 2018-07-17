@@ -4,7 +4,8 @@
 #include "boot.h"
 #include "physmman.h"
 
-static uint8_t *pgs[PGCNT];
+/* this is just stupid; we need a better system */
+static uint8_t pgs[PGCNT];
 static uint32_t usable[PGCNT / 32];
 static uint32_t reserved[PGCNT / 32];
 static unsigned int firstfree;
