@@ -13,7 +13,7 @@
 #define PT(x) ((PgDir *) (0xffc00000 + 0x1000 * (x)))
 #define SPG ((unsigned int) 0xffbfd)
 
-#define TICK 10 /*ms*/
+#define TICK 100 /*Hz*/
 
 typedef struct {
 	uint32_t edi, esi, ebp, bogus_esp, ebx, edx, ecx, eax;

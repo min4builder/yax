@@ -8,7 +8,7 @@ __stack_chk_fail:
 	push ebp
 	mov ebp, esp
 	push failtext
-	call printk
+;	call printk
 .die:	hlt
 	jmp .die
 .end:

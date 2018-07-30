@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include <sys/types.h>
+#include <yax/bit.h>
+#include <yax/stat.h>
 #include "libk.h"
 #include "stat.h"
 

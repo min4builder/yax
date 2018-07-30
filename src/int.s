@@ -46,7 +46,7 @@ int%1:
 	pushsegs
 	pushad
 	mov eax, [esp+48] ; error
-	mov ecx, 12
+	mov ecx, 48
 	lea esi, [esp+44]
 	lea edi, [esp+48]
 	std
@@ -128,7 +128,7 @@ int14:
 	pushsegs
 	pushad
 	mov eax, [esp+48] ; error
-	mov ecx, 8
+	mov ecx, 48
 	lea esi, [esp+44]
 	lea edi, [esp+48]
 	std

@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 #include <yax/errorcodes.h>
 #include <yax/mapflags.h>
@@ -6,125 +7,37 @@
 #include <yax/openflags.h>
 #include <yax/rfflags.h>
 #include <yax/stat.h>
+#include "port.h"
+#include "serve.h"
 #include "syscall.h"
 
-void exits(const char *);
+static char map[] = {
+	0x00, 0x1b, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '[', ']', '\b',
+	'\t', '\'', ',', '.', 'p', 'y', 'f', 'g', 'c', 'r', 'l', '/', '=', '\n',
+	0x00, 'a', 'o', 'e', 'u', 'i', 'd', 'h', 't', 'n', 's', '-', '\\',
+	0x00, '<', ';', 'q', 'j', 'k', 'x', 'b', 'm', 'w', 'v', 'z', 0x00, 0x00,
+	0x00, ' '
+};
 
-typedef struct {
-	enum { MSGDEL, MSGDUP, MSGPREAD, MSGPWRITE, MSGSTAT, MSGWSTAT, MSGWALK, MSGOPEN } fn;
-	int fid;
-	union {
-		struct {
-			int ret;
-		} dup;
-		struct {
-			void *buf;
-			size_t len;
-			off_t off;
-			ssize_t ret;
-		} rw;
-		struct {
-			void *buf;
-			size_t len;
-			ssize_t ret;
-		} stat;
-		struct {
-			char *path;
-			int ret;
-		} walk;
-		struct {
-			int fl;
-			int mode;
-			int ret;
-		} open;
-	} u;
-} Req;
+static int printfd;
 
-static int readc(int fd)
+void print(char *s)
 {
-	int err;
-	char c;
-	if((err = read(fd, &c, 1)) <= 0)
-		return err;
-	return c;
+	write(printfd, s, strlen(s));
 }
 
-static int writec(int fd, char c)
+void printi(unsigned int i)
 {
-	int err;
-	if((err = write(fd, &c, 1)) < 1)
-		return err;
-	return 0;
+	char is[16], *isp = is+16;
+	do {
+		*--isp = (i & 0xF) + ((i & 0xF) < 10 ? '0' : 'A' - 10);
+		i >>= 4;
+	} while(i > 0 && isp > is);
+	write(printfd, isp, 16 - (isp - is));
 }
 
-Req recv(int fd)
-{
-	char buf[21];
-	Req m;
-	read(fd, buf, 21);
-	m.fn = buf[0];
-	m.fid = GBIT32(buf+1);
-	switch(m.fn) {
-	case MSGDEL:
-		break;
-	case MSGDUP:
-		break;
-	case MSGPREAD:
-	case MSGPWRITE:
-		m.u.rw.len = GBIT32(buf+5);
-		m.u.rw.buf = (void *) GBIT32(buf+9);
-		m.u.rw.off = GBIT64(buf+13);
-		break;
-	case MSGSTAT:
-		exits("Stat");
-	case MSGWSTAT:
-		exits("Wstat");
-	case MSGWALK: {
-		size_t len = GBIT32(buf+5);
-		m.u.walk.path = malloc(len + 1);
-		if(len + 9 <= 21)
-			memcpy(m.u.walk.path, buf + 9, len);
-		else
-			read(fd, m.u.walk.path, len);
-		m.u.walk.path[len] = '\0';
-		break;
-	}
-	case MSGOPEN:
-		m.u.open.fl = GBIT32(buf+5);
-		m.u.open.mode = GBIT32(buf+9);
-		break;
-	}
-	return m;
-}
-
-void answer(Req m, int fd)
-{
-	char buf[8];
-	PBIT32(buf, m.fid);
-	switch(m.fn) {
-	case MSGDEL:
-		write(fd, buf, 4);
-		return;
-	case MSGDUP:
-		PBIT32(buf+4, m.u.dup.ret);
-		break;
-	case MSGPREAD:
-	case MSGPWRITE:
-		PBIT32(buf+4, m.u.rw.ret);
-		break;
-	case MSGSTAT:
-	case MSGWSTAT:
-		exits("nonsense");
-	case MSGWALK:
-		//free(m.u.walk.path);
-		PBIT32(buf+4, m.u.walk.ret);
-		break;
-	case MSGOPEN:
-		PBIT32(buf+4, m.u.open.ret);
-		break;
-	}
-	write(fd, buf, 8);
-}
+extern char initrd;
+extern size_t initrdlen;
 
 void _libc_main(char *argv, char *envp)
 {
@@ -134,29 +47,30 @@ void _libc_main(char *argv, char *envp)
 	__mountfd("/", fd, MAFTER);
 	close(fd);
 
+	printfd = __getprintk();
+
 	if(rfork(RFPROC|RFFDG)) {
 		int err;
 		char buf[32];
-		fd = open("/cons", ORDWR);
-		write(fd, "aoeui", 5);
-		/*while((err = read(fd, buf, 32)) > 0)
-			write(fd, buf, err);*/
+		fd = open("/file", OREAD);
+		while((err = read(fd, buf, 32)) > 0)
+			write(printfd, buf, err);
 	} else {
+		sffsserve(mnt, &initrd, initrdlen);
+#if 0
 		off_t delta = 0;
 		int a;
 		char *vga = mmap(0, 80 * 25 * 2, PROT_READ | PROT_WRITE, MAP_PHYS, 0, 0xB8000);
-		int p64 = open("/port/0064", ORDWR);
-		int p3d4 = open("/port/03d4", ORDWR);
-		int p3d5 = open("/port/03d5", ORDWR);
-		fd = open("/port/0060", ORDWR);
+		int irq1 = open("/irq/1", OREAD);
+		__iopl();
 		for(a = 0; a < 80 * 25; a++) {
 			vga[a*2] = ' ';
 			vga[a*2+1] = 0x07;
 		}
-		writec(p3d4, 0x0A);
-		writec(p3d5, (readc(p3d5) & 0xC0) | 0);
-		writec(p3d4, 0x0B);
-		writec(p3d5, (readc(p3d5) & 0xE0) | 15);
+		outb(0x03d4, 0x0A);
+		outb(0x03d5, (inb(0x03d5) & 0xC0) | 0);
+		outb(0x03d4, 0x0B);
+		outb(0x03d5, (inb(0x03d5) & 0xE0) | 15);
 		for(;;) {
 			Req r = recv(mnt);
 			switch(r.fn) {
@@ -171,27 +85,45 @@ void _libc_main(char *argv, char *envp)
 				break;
 			case MSGPWRITE: {
 				int b;
-				for(a = (int) (r.u.rw.off + delta) % (80 * 25), b = 0; a < ((int) (r.u.rw.off + delta) + r.u.rw.len) % (80 * 25); a++, b++) {
+				a = r.u.rw.off + delta;
+				for(b = 0; b < r.u.rw.len; b++) {
 					char c = ((char *)r.u.rw.buf)[b];
 					if(c == '\n') {
 						/* TODO */
+					} else if(c == '\b') {
+						a = (a - 1) < 0 ? 0 : a - 1;
+						delta -= 2;
+						vga[a*2] = ' ';
+						vga[a*2+1] = 0x07;
+						a = (a - 1) < 0 ? 0 : a - 1;
 					} else {
 						vga[a*2] = ((char *)r.u.rw.buf)[b];
 						vga[a*2+1] = 0x07;
+						a++;
 					}
 				}
-				writec(p3d4, 0x0F);
-				writec(p3d5, (uint8_t) (((int) (r.u.rw.off + delta + r.u.rw.len) % (80 * 25)) & 0xFF));
-				writec(p3d4, 0x0E);
-				writec(p3d5, (uint8_t) (((int) (r.u.rw.off + delta + r.u.rw.len) % (80 * 25)) >> 8));
+				outb(0x03d4, 0x0F);
+				outb(0x03d5, (uint8_t) (((int) (r.u.rw.off + delta + r.u.rw.len) % (80 * 25)) & 0xFF));
+				outb(0x03d4, 0x0E);
+				outb(0x03d5, (uint8_t) (((int) (r.u.rw.off + delta + r.u.rw.len) % (80 * 25)) >> 8));
 				break;
 			}
 			case MSGPREAD: {
-				/* IMPLEMENT KEYBOARD INPUT */
-				while(!(readc(p64) & 1)) {}
-				((char *)r.u.rw.buf)[0] = readc(fd);
-				r.u.rw.ret = 1;
-				break;
+				int i, j = 0, err;
+				while(!j) {
+					if((err = read(irq1, &i, sizeof(i))) < 0) {
+						r.u.rw.ret = err;
+						goto outloop;
+					}
+					for(err = 0, j = 0; err < i; err++) {
+						char c = inb(0x60);
+						if(c > sizeof(map)/sizeof(map[0]) || map[c] == 0)
+							continue;
+						((char *)r.u.rw.buf)[j++] = map[c];
+					}
+				}
+				r.u.rw.ret = j;
+outloop:			break;
 			}
 			case MSGWALK:
 				if(strcmp(r.u.walk.path, "cons") != 0)
@@ -204,6 +136,7 @@ void _libc_main(char *argv, char *envp)
 			}
 			answer(r, mnt);
 		}
+#endif
 	}
 
 	exits(0);

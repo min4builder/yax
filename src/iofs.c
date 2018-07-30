@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include <yax/bit.h>
 #include <yax/errorcodes.h>
 #include <yax/openflags.h>
 #include <yax/stat.h>
@@ -7,6 +8,7 @@
 #include "libk.h"
 #include "lock.h"
 #include "malloc.h"
+#include "multitask.h"
 #include "pic.h"
 #include "port.h"
 
@@ -15,12 +17,12 @@ typedef struct {
 	int n;
 } IoConn;
 
-static int irqcount[16];
+static Sem irqsem[16];
 static Lock irqlock[16];
 
 void iofsinterrupt(int n)
 {
-	irqcount[n]++;
+	semsignal(&irqsem[n], 1);
 	piceoi(n);
 }
 
@@ -352,10 +354,8 @@ static ssize_t ipread(Conn *c, void *buf, size_t len, off_t off)
 {
 	if(len < 4)
 		return -1;
-	ATOMIC(&irqlock[((IoConn *)c)->n]) {
-		PBIT32(buf, irqcount[((IoConn *)c)->n]);
-		irqcount[((IoConn *)c)->n] = 0;
-	}
+	semwait(&irqsem[((IoConn *)c)->n], 1);
+	PBIT32(buf, 1);
 	(void) off;
 	return 4;
 }

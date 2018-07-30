@@ -100,9 +100,6 @@ void *sys_mmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, u
 	} else if(flags & MAP_FIXED && (uint8_t *) addr + len > VIRT(0) ) {
 		printk("Can't map over kernel!\n");
 		return (void *) -EINVAL;
-	} else if(!(flags & MAP_ANONYMOUS || flags & MAP_PHYS)) {
-		printk("File mappings not supported yet!\n");
-		return (void *) -ENOTSUP;
 	}
 	ret = vpgmap(addr, len, prot | PROT_USER, flags, off);
 	uxprintk(ret);

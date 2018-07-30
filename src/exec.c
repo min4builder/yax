@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include <sys/types.h>
+#include <yax/bit.h>
 #include <yax/errorcodes.h>
 #include "arch.h"
 #include "boot.h"
@@ -8,62 +10,53 @@
 #include "virtmman.h"
 #include "exec.h"
 
-static uint16_t wordle(uint8_t *p)
+static int elfident(uint8_t *buf, size_t len)
 {
-	return p[0] + (p[1] << 8);
+	if(len < 4 || memcmp(buf, "\x7f""ELF", 4) != 0)
+		return 0;
+	if(len >= 5 && buf[4] != 1) /* 32-bit */
+		return 0;
+	if(len >= 6 && buf[5] != 1) /* LE */
+		return 0;
+	if(len >= 7 && buf[6] != 1) /* ELF version */
+		return 0;
+	if(len >= 8 && buf[7] != 0) /* SYSV ABI */
+		return 0;
+	if(len >= 18 && GBIT16(&buf[16]) != 2) /* executable */
+		return 0;
+	if(len >= 20 && GBIT16(&buf[18]) != 3) /* x86 */
+		return 0;
+	if(len >= 24 && GBIT32(&buf[20]) != 1) /* ELF version again */
+		return 0;
+	if(len >= 40 && GBIT32(&buf[36]) != 0) /* flags (none are defined) */
+		return 0;
+	if(len >= 44 && GBIT32(&buf[40]) < 52) /* header size */
+		return 0;
+	return 1;
 }
 
-static uint32_t dwordle(uint8_t *p)
+static uint32_t elfload(uint8_t *buf, void **entryp, char *argv, char *envp)
 {
-	return p[0] + (p[1] << 8) + (p[2] << 16) + (p[3] << 24);
-}
-
-uint32_t exec(uint8_t *mod, void **entryp, char *argv, char *envp)
-{
-	uint32_t phs/*, shs, str*/;
-	uint8_t *ph/*, *sh*/, *eph/*, *esh*/;
+	uint32_t phs;
+	uint8_t *ph, *eph;
 	PgDir *pd;
 	uint8_t *stack, *sp, *argvp, *envpp;
 	size_t arlen, envlen;
-	if(memcmp(mod, "\x7f""ELF", 4) != 0)
-		return -ENOEXEC;
-	if(mod[5] != 1)
-		return -ENOEXEC;
-	if(mod[6] != 1)
-		return -ENOEXEC;
-	if(mod[7] != 0)
-		return -ENOEXEC;
-	if(wordle(&mod[16]) != 2)
-		return -ENOEXEC;
-	if(wordle(&mod[18]) != 3)
-		return -ENOEXEC;
-	if(dwordle(&mod[20]) != 1)
-		return -ENOEXEC;
-	*entryp = (void *) dwordle(&mod[24]);
-	ph = mod + dwordle(&mod[28]);
-/*	sh = mod + dwordle(&mod[32]);
-*/
-	if(dwordle(&mod[36]) != 0)
-		return -ENOEXEC;
-	if(wordle(&mod[40]) < 52)
-		return -ENOEXEC;
-	phs = wordle(&mod[42]);
-	eph = ph + phs * wordle(&mod[44]);
-/*	shs = wordle(&mod[46]);
-	esh = sh + shs * wordle(&mod[48]);
-	str = wordle(&mod[50]);
-*/
+	*entryp = (void *) GBIT32(&buf[24]);
+	ph = buf + GBIT32(&buf[28]);
+	phs = GBIT16(&buf[42]);
+	eph = ph + phs * GBIT16(&buf[44]);
 	pd = vpgnew();
 	pd = switchpgdir(pd);
 	while(ph < eph) {
-		switch(dwordle(&ph[0])) {
+		switch(GBIT32(&ph[0])) {
 		case 1: {
 			uint32_t addr, size, lsize;
 			int rprot, prot = 0;
-			addr = dwordle(&ph[8]);
-			size = dwordle(&ph[20]);
-			lsize = dwordle(&ph[16]);
-			rprot = dwordle(&ph[24]);
+			addr = GBIT32(&ph[8]);
+			size = GBIT32(&ph[20]);
+			lsize = GBIT32(&ph[16]);
+			rprot = GBIT32(&ph[24]);
 			if(rprot & 1)
 				prot |= PROT_EXEC;
 			if(rprot & 2)
@@ -73,7 +66,7 @@ uint32_t exec(uint8_t *mod, void **entryp, char *argv, char *envp)
 			if(lsize > size || addr / PGLEN == 0 || (uint8_t *) addr + size > VIRT(0))
 				goto noexec;
 			vpgmap((void *) (PGLEN * (addr / PGLEN)), size, prot | PROT_USER, MAP_ANONYMOUS | MAP_FIXED, 0);
-			memcpy((void *) addr, mod + dwordle(&ph[4]), lsize);
+			memcpy((void *) addr, buf + GBIT32(&ph[4]), lsize);
 			memset((uint8_t *) addr + lsize, 0, size - lsize);
 			break;
 		}
@@ -102,6 +95,13 @@ noexec:
 	vpgclear();
 	pd = switchpgdir(pd);
 	vpgdel(pd);
+	return -ENOEXEC;
+}
+
+uint32_t execmod(void *mod, size_t len, void **entryp, char *argv, char *envp)
+{
+	if(elfident(mod, len))
+		return elfload(mod, entryp, argv, envp);
 	return -ENOEXEC;
 }
 

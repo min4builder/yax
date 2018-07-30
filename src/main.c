@@ -45,63 +45,19 @@ void dumpregs(Regs *r)
 
 void int_handler(Regs *r, uint8_t n, uint32_t err)
 {
-	printk("Interrupt ");
-	iprintk(n);
-	printk(" at ");
-	uxprintk(r->cs);
-	cprintk(':');
-	uxprintk(r->eip);
-	cprintk('\n');
 	if(n >= 0x20 && n < 0x30) {
 		iofsinterrupt(n - 0x20);
 	} else if(n == 8) {
+		dumpregs(r);
 		printk("Double fault!\n");
 		printk("IDK what to do! PANIC!!!!\n");
 		halt();
 	}
-	if(n == 13)
+	if(n == 13) {
+		dumpregs(r);
 		halt();
+	}
 	(void) err;
-}
-
-void page_fault(Regs *r, void *addr, uint32_t err)
-{
-	dumpregs(r);
-	printk("Page fault");
-	if(!(err & 0x1))
-		printk("-not present");
-	if(err & 0x2)
-		printk("-on write");
-	if(!(err & 0x4))
-		printk("-by kernel");
-	else {
-		printk("-by process ");
-		iprintk(curproc->pid);
-	}
-	if(err & 0x8)
-		printk("-reserved bit set");
-	if(err & 0x10)
-		printk("-on execute");
-	printk("-at 0x");
-	uxprintk(r->cs);
-	cprintk(':');
-	uxprintk(r->eip);
-	if(addr < (void *) 4096)
-		printk("-null pointer dereference");
-	printk("-on access 0x");
-	uxprintk((uint32_t)addr);
-	cprintk('\n');
-	printk("PDE 0x");
-	uxprintk((uint32_t) &(*PGDIR)[(unsigned int) addr / PGLEN / 1024]);
-	printk(" PT 0x");
-	uxprintk((uint32_t) &(*PT((unsigned int) addr / PGLEN / 1024))[(unsigned int) addr / PGLEN % 1024]);
-	if((*PGDIR)[(unsigned int) addr / PGLEN / 1024] & PGPRESENT) {
-		printk("PDE present");
-		if((*PT((unsigned int) addr / PGLEN / 1024))[(unsigned int) addr / PGLEN % 1024] & PGPRESENT)
-			printk("-PTE present");
-		cprintk('\n');
-	}
-	halt();
 }
 
 void kernel_main(MultibootInfo *mbinfo)
@@ -130,7 +86,7 @@ void kernel_main(MultibootInfo *mbinfo)
 	if(procrfork(RFPROC|RFMEM|RFFDG) != 0)
 		for(;;) idle();
 
-	if((err = exec(VIRT(mod.start), &code, "argv", "envp")) < 0 && err > -MAXERR) {
+	if((err = execmod(VIRT(mod.start), mod.end - mod.start, &code, "argv", "envp")) < 0 && err > -MAXERR) {
 		printk("exec = E");
 		uxprintk(-err);
 		cprintk('\n');

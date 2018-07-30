@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <yax/errorcodes.h>
 #include <yax/mapflags.h>
 #include "arch.h"
 #include "boot.h"
@@ -44,13 +45,10 @@ PgDir *vpgcopy(int memshare)
 		for(j = 0; j < 1024; j++) {
 			if(!((*pt)[j] & PGPRESENT))
 				continue;
-			if((*pt)[j] & PGNOSHARE || (!memshare && (*pt)[j] & PGWRITEABLE)) {
-				unsigned int p = ppgalloc();
-				(*(PgDir *)spg)[j] = (*pt)[j] & ~PGADDR;
-				(*(PgDir *)spg)[j] |= p << 12;
-				map(SPG, p, PROT_READ | PROT_WRITE, 1);
-				memcpy(spg, (void *) ((i * 1024 + j) * PGLEN), PGLEN);
-				map(SPG, (*(PgDir *)spg)[i] >> 12, PROT_READ | PROT_WRITE, 1);
+			if((*pt)[j] & PGWRITEABLE && (!memshare || (*pt)[j] & PGNOSHARE)) {
+				(*pt)[j] = ((*pt)[j] & ~PGWRITEABLE) | PGCOW;
+				(*(PgDir *)spg)[j] = ((*pt)[j] & ~PGWRITEABLE) | PGCOW;
+				ppgref((*pt)[j] >> 12);
 			} else {
 				(*(PgDir *)spg)[j] = (*pt)[j];
 				ppgref((*pt)[j] >> 12);
@@ -61,7 +59,16 @@ PgDir *vpgcopy(int memshare)
 	return ppd;
 }
 
-static void map(unsigned int pg, unsigned int addr, int prot, int noshare)
+static PgEntry mkpg(unsigned int addr, int prot, int noshare)
+{
+	return addr << 12
+		| (noshare ? PGNOSHARE : 0)
+		| (pg >= (unsigned int) VIRT(0) / PGLEN ? PGGLOBAL : PGUSER)
+		| (prot & PROT_WRITE ? PGWRITEABLE : 0)
+		| PGPRESENT;
+}
+
+static void map(unsigned int pg, PgEntry page)
 {
 	PgDir *pt;
 	if(!((*PGDIR)[pg / 1024] & PGPRESENT)) {
@@ -71,11 +78,7 @@ static void map(unsigned int pg, unsigned int addr, int prot, int noshare)
 		pginval((unsigned int) PT(pg / 1024) / PGLEN);
 	}
 	pt = PT(pg / 1024);
-	(*pt)[pg % 1024] = addr << 12
-		| (noshare ? PGNOSHARE : 0)
-		| (pg >= (unsigned int) VIRT(0) / PGLEN ? PGGLOBAL : PGUSER)
-		| (prot & PROT_WRITE ? PGWRITEABLE : 0)
-		| PGPRESENT;
+	(*pt)[pg % 1024] = page;
 	pginval(pg);
 }
 
@@ -103,7 +106,7 @@ contwhile:	;
 	return 0;
 }
 
-void *vpgmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, off_t offs)
+void *vpgmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, Conn *c, off_t off)
 {
 	unsigned int npgs = (len + PGLEN - 1) / PGLEN;
 	unsigned int pgs;
@@ -118,15 +121,20 @@ void *vpgmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, off
 		printk(" npgs=0x");
 		uxprintk(npgs);
 		cprintk('\n');
+		if(pgs == 0)
+			return ERR2PTR(-ENOMEM);
 	}
-	if(pgs == 0)
-		return 0;
+	if(!(flags & (MAP_FIXED | MAP_ANONYMOUS))) {
+		/* TODO */
+	}
 	for(i = pgs; i < pgs + npgs; i++) {
 		if(flags & MAP_PHYS) {
-			map(i, (unsigned int) offs / PGLEN, prot, flags & MAP_NOSHARE);
+			map(i, mkpg((unsigned int) off / PGLEN, prot, flags & MAP_NOSHARE));
 		} else if(flags & MAP_ANONYMOUS) {
 			unsigned int p = ppgalloc();
-			map(i, p, prot, flags & MAP_NOSHARE);
+			map(i, mkpg(p, prot, flags & MAP_NOSHARE));
+		} else {
+			/* TODO */
 		}
 	}
 	return (void *) (pgs * PGLEN);
@@ -249,7 +257,7 @@ void *putusrptr(PgList *pl)
 		return 0;
 	ref(pl);
 	for(i = pgs; i < pgs + npgs; i++)
-		map(i, pl->e[i - pgs], PROT_USER | PROT_READ | PROT_WRITE, 1);
+		map(i, mkpg(pl->e[i - pgs], PROT_USER | PROT_READ | PROT_WRITE, 1));
 	return (void *) (pgs * PGLEN + pl->delta);
 }
 
@@ -264,5 +272,55 @@ void freeusrptr(PgList *pl, void *p)
 			ppgunref(p);
 	}
 	unref(pl);
+}
+
+void page_fault(Regs *r, void *addr, uint32_t err)
+{
+	dumpregs(r);
+	printk("Page fault");
+	if((*PGDIR)[(unsigned int) addr / PGLEN / 1024] & PGPRESENT) {
+		printk("-PDE present");
+		if((*PT((unsigned int) addr / PGLEN / 1024))[(unsigned int) addr / PGLEN % 1024] & PGPRESENT) {
+			printk("-PTE present");
+			if((*PT((unsigned int) addr / PGLEN / 1024))[(unsigned int) addr / PGLEN % 1024] & PGCOW) {
+				unsigned int p = ppgalloc();
+				PgEntry *pe = &(*PT((unsigned int) addr / PGLEN / 1024))[(unsigned int) addr / PGLEN % 1024];
+				unsigned int p2 = *pe & PGADDR;
+				*pe &= ~(PGADDR | PGCOW);
+				*pe |= (p << 12) | PGWRITEABLE;
+				map(SPG, mkpg(p2, PROT_READ, 1));
+				memcpy(addr, spg, PGLEN);
+				printk("-CoW\n");
+				return;
+			}
+		}
+	}
+	if(!(err & 0x1))
+		printk("-not present");
+	if(err & 0x2)
+		printk("-on write");
+	if(!(err & 0x4))
+		printk("-by kernel");
+	else {
+		printk("-by a process");
+	}
+	if(err & 0x8)
+		printk("-reserved bit set");
+	if(err & 0x10)
+		printk("-on execute");
+	printk("-at 0x");
+	uxprintk(r->cs);
+	cprintk(':');
+	uxprintk(r->eip);
+	if(addr < (void *) 4096)
+		printk("-null pointer dereference");
+	printk("-on access 0x");
+	uxprintk((uint32_t)addr);
+	printk("-PDE 0x");
+	uxprintk((uint32_t) &(*PGDIR)[(unsigned int) addr / PGLEN / 1024]);
+	printk("-PT 0x");
+	uxprintk((uint32_t) &(*PT((unsigned int) addr / PGLEN / 1024))[(unsigned int) addr / PGLEN % 1024]);
+	cprintk('\n');
+	halt();
 }
 

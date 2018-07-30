@@ -1,3 +1,4 @@
+#include <yax/bit.h>
 #include <yax/openflags.h>
 #include "conn.h"
 #include "libk.h"

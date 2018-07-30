@@ -2,6 +2,7 @@
 #include "port.h"
 #include "printk.h"
 
+#ifndef NDEBUG
 #define PORT 0x3f8
 
 void initprintk(void)
@@ -106,4 +107,6 @@ void printk(const char *s)
 	for(i = 0; s[i]; i++)
 		pcprintk(s[i]);
 }
+
+#endif /* !defined(NDEBUG) */
 

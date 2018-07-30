@@ -5,8 +5,10 @@
 #include <sys/types.h>
 
 void _exits(const char *);
+void exits(const char *);
 pid_t rfork(int);
 void exec(const char *, const char *, const char *);
+int __getprintk(void);
 
 int mkmnt(int *);
 
@@ -14,7 +16,7 @@ void *mmap(void *, size_t, int, int, int, off_t);
 int munmap(void *, size_t);
 
 void (*notify(void (*)(void *, const char *)))(void *, const char *);
-int __getprintk(void);
+void __iopl(void);
 void noted(int);
 
 void sleep(clock_t);

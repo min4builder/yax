@@ -122,17 +122,24 @@ _syscall:
 	mov eax, -1 ; -ENOSYS
 	ret
 .end:
+sys_iopl:
+	pushf
+	pop eax
+	or eax, 0x3000
+	push eax
+	popf
+	ret
 
 section .rodata
 calltable:
 	dd sys_exits
 	dd sys_rfork
-	dd 0 ;sys_exec
+	dd sys_getprintk ;sys_exec
 	dd sys_mkmnt
 	dd sys_mmap
 	dd sys_munmap
 	dd sys_notify
-	dd sys_getprintk ;sys_iopl
+	dd sys_iopl
 	dd sys_noted
 	dd sys_sleep
 	dd sys_alarm

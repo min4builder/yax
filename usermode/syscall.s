@@ -14,7 +14,7 @@ global %1:function (%1.end - %1)
 %endmacro
 sys _exits, 0
 sys rfork, 1
-;sys exec, 2
+sys __getprintk, 2;sys exec, 2
 
 sys mkmnt, 3
 
@@ -22,7 +22,7 @@ sys mmap, 4
 sys munmap, 5
 
 sys notify, 6
-sys __getprintk, 7
+sys __iopl, 7
 sys noted, 8
 
 sys sleep, 9

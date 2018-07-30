@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <yax/mapflags.h>
+#include "conn.h"
 #include "ref.h"
 
 enum pgfields {
@@ -11,7 +12,8 @@ enum pgfields {
 	PGWRITEABLE = 1 << 1,
 	PGUSER = 1 << 2,
 	PGGLOBAL = 1 << 8,
-	PGNOSHARE = 1 << 9
+	PGNOSHARE = 1 << 9,
+	PGCOW = 1 << 10
 };
 
 #define PGADDR 0xfffff000
@@ -30,7 +32,7 @@ typedef struct {
 #define PROT_USER 8
 
 PgDir *vpgnew(void);
-void *vpgmap(void *, size_t, enum mapprot, enum mapflags, off_t);
+void *vpgmap(void *, size_t, enum mapprot, enum mapflags, Conn *, off_t);
 PgDir *vpgcopy(int);
 void vpgunmap(void *, size_t);
 void vpgclear(void);

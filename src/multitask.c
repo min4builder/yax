@@ -112,7 +112,6 @@ void *procswitchgut(void *sp)
 {
 	Proc *prev;
 	CRITSEC {
-		printk("procswitch()\n");
 		curproc->quantum = curproc->priority;
 		curproc->sp = sp;
 		prev = curproc;

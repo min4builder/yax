@@ -21,8 +21,8 @@ On interrupt:
  - int:int<n>
    - most get ignored
  - or one of:
-   - main:page_fault
-     - to be moved to mem
+   - virtmman:page_fault
+     - handles segfaults and CoW
    - main:interrupt
      - deals with IRQs
      - just prints debugging info on the screen
