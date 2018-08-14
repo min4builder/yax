@@ -2,16 +2,17 @@
 #define _ARCH_H
 
 #include <stdint.h>
+#include <sys/types.h>
 #include <yax/errorcodes.h>
 #include "boot.h"
 
 #define PGCNT ((unsigned int) 1 << 20)
-#define UPGCNT ((unsigned int) VIRT(0) / PGLEN / 1024)
+#define MAXUPG VIRT(0)
 #define PGLEN ((unsigned int) 1 << 12)
 
 #define PGDIR ((PgDir *) 0xfffff000)
 #define PT(x) ((PgDir *) (0xffc00000 + 0x1000 * (x)))
-#define SPG ((unsigned int) 0xffbfd)
+#define SPG ((void *) 0xffbfd000)
 
 #define TICK 100 /*Hz*/
 

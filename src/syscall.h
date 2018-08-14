@@ -18,6 +18,8 @@
 void sys_exits(const char *);
 pid_t sys_rfork(enum rfflags);
 
+int sys_exec(const char *, const char *, const char *);
+
 int sys_mkmnt(int *);
 
 void *sys_mmap(void *, size_t, enum mapprot, enum mapflags, uint32_t, off_t);
@@ -48,10 +50,6 @@ ssize_t sys_wstat(const char *, const void *, size_t);
 ssize_t sys_fwstat(int, const void *, size_t);
 
 int sys_getprintk(void);
-
-void reap(pid_t);
-void wakeup(pid_t);
-void alarm(pid_t);
 
 #endif /* _SYSCALL_H */
 

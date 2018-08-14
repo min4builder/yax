@@ -7,7 +7,8 @@ strlen:
 	push edi
 	mov edi, [ebp+8]
 	mov al, 0
-.loop:	repne scasb
+.loop:	scasb
+	jne .loop
 	mov eax, edi
 	sub eax, [ebp+8]
 	dec eax

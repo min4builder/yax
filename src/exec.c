@@ -65,7 +65,7 @@ static uint32_t elfload(uint8_t *buf, void **entryp, char *argv, char *envp)
 				prot |= PROT_READ;
 			if(lsize > size || addr / PGLEN == 0 || (uint8_t *) addr + size > VIRT(0))
 				goto noexec;
-			vpgmap((void *) (PGLEN * (addr / PGLEN)), size, prot | PROT_USER, MAP_ANONYMOUS | MAP_FIXED, 0);
+			vpgmap((void *) (PGLEN * (addr / PGLEN)), size, prot | PROT_USER, MAP_ANONYMOUS | MAP_FIXED, 0, 0, 0);
 			memcpy((void *) addr, buf + GBIT32(&ph[4]), lsize);
 			memset((uint8_t *) addr + lsize, 0, size - lsize);
 			break;
@@ -80,12 +80,12 @@ static uint32_t elfload(uint8_t *buf, void **entryp, char *argv, char *envp)
 	}
 	arlen = strlen(argv) + 1;
 	envlen = strlen(envp) + 1;
-	stack = vpgmap(VIRT(0) - PGLEN, PGLEN, PROT_READ | PROT_WRITE | PROT_USER, MAP_ANONYMOUS | MAP_FIXED | MAP_NOSHARE, 0);
+	stack = vpgmap(VIRT(0) - PGLEN, PGLEN, PROT_READ | PROT_WRITE | PROT_USER, MAP_ANONYMOUS | MAP_FIXED | MAP_NOSHARE, 0, 0, 0);
 	sp = stack + PGLEN;
-	argvp = STACKPUSH(sp, argv, arlen);
 	envpp = STACKPUSH(sp, envp, envlen);
-	STACKPUSH(sp, &argvp, sizeof(uint8_t *));
+	argvp = STACKPUSH(sp, argv, arlen);
 	STACKPUSH(sp, &envpp, sizeof(uint8_t *));
+	STACKPUSH(sp, &argvp, sizeof(uint8_t *));
 	pd = switchpgdir(pd);
 	vpgclear();
 	pd = switchpgdir(pd);
@@ -102,6 +102,92 @@ uint32_t execmod(void *mod, size_t len, void **entryp, char *argv, char *envp)
 {
 	if(elfident(mod, len))
 		return elfload(mod, entryp, argv, envp);
+	return -ENOEXEC;
+}
+
+static uint32_t elfrun(Conn *c, void **entryp, char *argv, char *envp)
+{
+#define epread(c, buf, len, off) do { int err; if((err = connpread(c, buf, len, off)) < (len)) return err < 0 ? err : -EIO; } while(0)
+	uint32_t phs;
+	size_t ph, eph;
+	PgDir *pd;
+	uint8_t *stack, *sp, *argvp, *envpp;
+	size_t arlen, envlen;
+	char buf[4];
+	epread(c, buf, 4, 24);
+	*entryp = (void *) GBIT32(buf);
+	epread(c, buf, 4, 28);
+	ph = GBIT32(buf);
+	epread(c, buf, 2, 42);
+	phs = GBIT16(buf);
+	epread(c, buf, 2, 44);
+	eph = ph + phs * GBIT16(buf);
+	pd = vpgnew();
+	pd = switchpgdir(pd);
+	while(ph < eph) {
+		epread(c, buf, 4, ph);
+		switch(GBIT32(buf)) {
+		case 1: {
+			uint32_t addr, size, lsize, off;
+			int rprot, prot = 0;
+			epread(c, buf, 4, ph + 4);
+			off = GBIT32(buf);
+			epread(c, buf, 4, ph + 8);
+			addr = GBIT32(buf);
+			epread(c, buf, 4, ph + 16);
+			lsize = GBIT32(buf);
+			epread(c, buf, 4, ph + 20);
+			size = GBIT32(buf);
+			epread(c, buf, 4, ph + 24);
+			rprot = GBIT32(buf);
+			if(rprot & 1)
+				prot |= PROT_EXEC;
+			if(rprot & 2)
+				prot |= PROT_WRITE;
+			if(rprot & 4)
+				prot |= PROT_READ;
+			if(lsize > size || addr / PGLEN == 0 || addr % PGLEN || (uint8_t *) addr + size > VIRT(0))
+				goto noexec;
+			vpgmap((void *) addr, size, prot | PROT_USER, MAP_PRIVATE | MAP_FIXED, c, off, lsize);
+			break;
+		}
+		case 0:
+		case 4:
+			break;
+		default:
+			goto noexec;
+		}
+		ph += phs;
+	}
+	arlen = strlen(argv) + 1;
+	envlen = strlen(envp) + 1;
+	stack = vpgmap(VIRT(0) - PGLEN, PGLEN, PROT_READ | PROT_WRITE | PROT_USER, MAP_ANONYMOUS | MAP_FIXED | MAP_NOSHARE, 0, 0, 0);
+	sp = stack + PGLEN;
+	envpp = STACKPUSH(sp, envp, envlen);
+	argvp = STACKPUSH(sp, argv, arlen);
+	STACKPUSH(sp, &envpp, sizeof(uint8_t *));
+	STACKPUSH(sp, &argvp, sizeof(uint8_t *));
+	pd = switchpgdir(pd);
+	vpgclear();
+	pd = switchpgdir(pd);
+	vpgdel(pd);
+	return (uint32_t) sp;
+noexec:
+	vpgclear();
+	pd = switchpgdir(pd);
+	vpgdel(pd);
+	return -ENOEXEC;
+#undef epread
+}
+
+uint32_t exec(Conn *c, void **entryp, char *argv, char *envp)
+{
+	char buf[32];
+	ssize_t err = connpread(c, buf, 32, 0);
+	if(err < 0)
+		return err;
+	if(elfident(buf, err))
+		return elfrun(c, entryp, argv, envp);
 	return -ENOEXEC;
 }
 

@@ -1,3 +1,6 @@
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include <sys/types.h>
 #include <yax/openflags.h>
 #include "conn.h"

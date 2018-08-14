@@ -2,9 +2,9 @@
 #define _STDLIB_H
 
 #include <sys/types.h>
+#include <yax/malloc.h>
 
-void *malloc(size_t);
-void free(void *);
+void abort(void);
 
 #endif /* _STDLIB_H */
 

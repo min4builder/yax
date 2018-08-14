@@ -47,7 +47,7 @@ __start:
 	or ecx, 0x90 ; 4mb pages & global pages
 	mov cr4, ecx
 	mov ecx, cr0
-	or ecx, 0x80000000 ; enable paging
+	or ecx, 0x80008000 ; enable paging and WP
 	mov cr0, ecx
 	mov ecx, .higherhalf
 	jmp ecx

@@ -80,7 +80,7 @@ Conn *mntnew(Conn **master)
 	qid.type = 0x80;
 	conninit((Conn *)root, "", qid, &cops, s);
 	root->s = s;
-	ref(s); /* every client has a reference; might not be a good idea */
+	ref(s); /* TODO every client has a reference; might not be a good idea */
 	return root;
 }
 

@@ -15,7 +15,7 @@ OBJS = boot.o conn.o exec.o fds.o int.o iofs.o libk.o lock.o main.o malloc.o \
 	pit.o port.o printk.o printkfs.o ref.o ssp.o stat.o syscall.o \
 	sysentry.o virtmman.o
 
-all: yax.bin ../usermode/initrd
+all: yax.bin
 
 clean:
 	-$(RM) -f *.o depend.mk yax.bin yax.img yax.sym

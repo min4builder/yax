@@ -7,8 +7,7 @@
 void _exits(const char *);
 void exits(const char *);
 pid_t rfork(int);
-void exec(const char *, const char *, const char *);
-int __getprintk(void);
+int exec(const char *, const char *, const char *);
 
 int mkmnt(int *);
 
@@ -42,6 +41,8 @@ ssize_t stat(const char *, void *, size_t);
 ssize_t fstat(int, void *, size_t);
 ssize_t wstat(const char *, const void *, size_t);
 ssize_t fwstat(int, const void *, size_t);
+
+int __getprintk(void);
 
 #endif /* _SYSCALL_H */
 

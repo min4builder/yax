@@ -62,7 +62,7 @@ void int_handler(Regs *r, uint8_t n, uint32_t err)
 
 void kernel_main(MultibootInfo *mbinfo)
 {
-	unsigned int i;
+	uintptr_t i;
 	int err;
 	void *code;
 	Module mod;
@@ -75,7 +75,7 @@ void kernel_main(MultibootInfo *mbinfo)
 	mod = mbinfo->mods[0];
 	ppginit(mbinfo->mmaplen, mbinfo->mmap);
 	/* do this before anyone uses these pages accidentally */
-	for(i = (unsigned int) mod.start / PGLEN; i <= (unsigned int) mod.end / PGLEN; i++)
+	for(i = (uintptr_t) mod.start; i <= (uintptr_t) mod.end; i += PGLEN)
 		ppgreserve(i);
 	clearkidmap();
 	procsetup();
@@ -95,7 +95,7 @@ void kernel_main(MultibootInfo *mbinfo)
 	/* exec on kernelland only changes user mappings, we are still running
 	 * here until we change to user mode */
 	/* no need for these anymore */
-	for(i = (unsigned int) mod.start / PGLEN; i <= (unsigned int) mod.end / PGLEN; i++)
+	for(i = (uintptr_t) mod.start; i <= (uintptr_t) mod.end; i += PGLEN)
 		ppgunref(i);
 	vfsmount("/", iofsnew(), 0); /* TODO check for errors and stuff */
 	usermode(code, (void *) err);

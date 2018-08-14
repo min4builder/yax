@@ -1,7 +1,6 @@
 #ifndef _BOOT_H
 #define _BOOT_H
 #include <stdint.h>
-#include "virtmman.h"
 
 typedef struct {
 	uint32_t size;

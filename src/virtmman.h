@@ -11,9 +11,15 @@ enum pgfields {
 	PGPRESENT = 1 << 0,
 	PGWRITEABLE = 1 << 1,
 	PGUSER = 1 << 2,
+	PGDIRTY = 1 << 6,
 	PGGLOBAL = 1 << 8,
 	PGNOSHARE = 1 << 9,
-	PGCOW = 1 << 10
+	PGCOW = 1 << 10,
+	PGFILE = 1 << 11
+};
+
+enum pgspecial {
+	PGEMPTY = 0x2
 };
 
 #define PGADDR 0xfffff000
@@ -32,7 +38,7 @@ typedef struct {
 #define PROT_USER 8
 
 PgDir *vpgnew(void);
-void *vpgmap(void *, size_t, enum mapprot, enum mapflags, Conn *, off_t);
+void *vpgmap(void *, size_t, enum mapprot, enum mapflags, Conn *, off_t, size_t);
 PgDir *vpgcopy(int);
 void vpgunmap(void *, size_t);
 void vpgclear(void);

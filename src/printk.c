@@ -1,8 +1,10 @@
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
 #include "pic.h"
 #include "port.h"
 #include "printk.h"
 
-#ifndef NDEBUG
 #define PORT 0x3f8
 
 void initprintk(void)
@@ -24,7 +26,7 @@ void cprintk(char c)
 
 static void pcprintk(char c)
 {
-	if(c >= ' ' && c < 0x7F || c == '\n')
+	if(c >= ' ' && c < 0x7F || c == '\n' || c == '\t')
 		cprintk(c);
 	else {
 		cprintk('\\');
@@ -107,6 +109,4 @@ void printk(const char *s)
 	for(i = 0; s[i]; i++)
 		pcprintk(s[i]);
 }
-
-#endif /* !defined(NDEBUG) */
 

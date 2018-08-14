@@ -3,7 +3,7 @@ ENTRY(_start)
 SECTIONS
 {
 	. = VIRT + 0x100000;
-	KERNEL_LOAD = .;
+	KERNEL_LOAD = . - VIRT;
 	_int_start_high = ADDR(int_handler) >> 16;
 	_kernel_pt1_lonibble = ((_kernel_pt1 - VIRT) >> 8) & 0xf0;
 	_kernel_pt1_hiword = ((_kernel_pt1 - VIRT) >> 16) & 0xffff;
@@ -45,6 +45,6 @@ SECTIONS
 		*(.bss)
 	}
 	RW_SECTIONS_LEN = . - RW_SECTIONS;
-	KERNEL_LOAD_END = ALIGN(4K);
+	KERNEL_LOAD_END = ALIGN(4K) - VIRT;
 }
 

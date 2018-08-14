@@ -1,3 +1,4 @@
+#define NDEBUG
 #include <stdint.h>
 #include <yax/errorcodes.h>
 #include <yax/mapflags.h>
@@ -5,8 +6,10 @@
 #include <yax/rfflags.h>
 #include "boot.h"
 #include "conn.h"
+#include "exec.h"
 #include "fds.h"
 #include "mnt.h"
+#include "malloc.h"
 #include "multitask.h"
 #include "name.h"
 #include "pipe.h"
@@ -14,6 +17,7 @@
 #include "printkfs.h"
 #include "virtmman.h"
 #include "syscall.h"
+#include "sysentry.h"
 
 /* all functions in here are simple wrappers around internal kernel functions
  * they simply verify their arguments, print some debugging stuff and call
@@ -64,6 +68,54 @@ pid_t sys_rfork(enum rfflags flags)
 	return pid;
 }
 
+int sys_exec(const char *name, const char *argv, const char *envp)
+{
+	uint32_t ret;
+	Conn *c;
+	void *entryp;
+	iprintk(curproc->pid);
+	printk(": exec(");
+	if(!verusrstr(name, PROT_READ)) {
+		printk("<invalid>) = -EINVAL;\n");
+		return -EINVAL;
+	}
+	cprintk('"');
+	printk(name);
+	printk("\", ");
+	if(!verusrstr(argv, PROT_READ) || strlen(argv) > 1024) {
+		printk("<invalid>) = -EINVAL;\n");
+		return -EINVAL;
+	}
+	cprintk('"');
+	printk(argv);
+	printk("\", ");
+	if(!verusrstr(envp, PROT_READ) || strlen(envp) > 1024) {
+		printk("<invalid>) = -EINVAL;\n");
+		return -EINVAL;
+	}
+	cprintk('"');
+	printk(envp);
+	printk("\") = ");
+	c = vfsopen(name, OREAD | OEXEC, 0);
+	if(PTRERR(c))
+		return PTR2ERR(c);
+	void *newargv = malloc(strlen(argv) + 1);
+	memcpy(newargv, argv, strlen(argv) + 1);
+	void *newenvp = malloc(strlen(envp) + 1);
+	memcpy(newenvp, envp, strlen(envp) + 1);
+	ret = exec(c, &entryp, newargv, newenvp);
+	unref(c);
+	if(PTRERR(ret))
+		goto bail;
+	free(newargv);
+	free(newenvp);
+	usermode(entryp, (void *) ret);
+bail:
+	free(newargv);
+	free(newenvp);
+	return ret;
+}
+
 int sys_mkmnt(int *master)
 {
 	Conn *root, *m;
@@ -79,6 +131,7 @@ int sys_mkmnt(int *master)
 void *sys_mmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, uint32_t fd, off_t off)
 {
 	void *ret;
+	Conn *c = 0;
 	iprintk(curproc->pid);
 	printk(": mmap(");
 	uxprintk((uint32_t)addr);
@@ -101,7 +154,14 @@ void *sys_mmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, u
 		printk("Can't map over kernel!\n");
 		return (void *) -EINVAL;
 	}
-	ret = vpgmap(addr, len, prot | PROT_USER, flags, off);
+	if(!(flags & (MAP_ANONYMOUS | MAP_PHYS))) {
+		c = FD2CONN(fd);
+		if(!c) {
+			printk("-EINVAL;\n");
+			return ERR2PTR(-EINVAL);
+		}
+	}
+	ret = vpgmap(addr, len, prot | PROT_USER, flags, c, off, len);
 	uxprintk(ret);
 	printk(";\n");
 	return ret;

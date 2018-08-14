@@ -1,25 +1,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <unistd.h>
 #include <yax/errorcodes.h>
 #include <yax/openflags.h>
+#include <yax/serve.h>
 #include <yax/stat.h>
-#include "serve.h"
-#include "syscall.h"
+
+typedef struct File File;
+struct File {
+	Dir d;
+	char *pos;
+	File *sub;
+	File *next;
+};
 
 typedef struct {
-	char *pos;
+	File *f;
 	int open;
-	size_t size;
-} File;
-typedef struct {
-	char *pos;
-	Dir *de;
-	int nde;
-} Directory;
+} Fid;
 
-static File fs[256];
-static Directory ds[256];
+static File *root;
+static Fid fs[256];
 
 static int oparse(char *s, int l)
 {
@@ -35,167 +37,151 @@ static char *fname(const char *s)
 {
 	char *os = s;
 	while(*s) {
-		if(*s == '/')
-			os = s+1;
+		if(*s == '/') {
+			if(!s[1]) {
+				char *ns = malloc(strlen(os));
+				strlcpy(ns, os, strlen(os));
+				return ns;
+			} else
+				os = s+1;
+		}
 		s++;
 	}
 	return os;
 }
 
-static int sstrdir(const char *a1, const char *a2, const char *b1, const char *b2)
+static int subent(char *a1, char *a2, char *b)
 {
-	char *a15 = "/", *b15 = "/";
+	char *a15 = "/";
 	for(;;) {
 		if(!*a1 && a15) {
 			a1 = a15;
 			a15 = a2;
 			a2 = 0;
 		}
-		if(!*b1 && b15) {
-			b1 = b15;
-			b15 = b2;
-			b2 = 0;
-		}
-		if(!*b1 && *a1) {
+		if(*a1 && !*b) {
 			while(*a1) {
-				if(*a1 == '/')
+				if(*a1 == '/' && a1[1])
 					return 0;
 				a1++;
 			}
 			return 1;
 		}
-		if(*a1 != *b1 || (!*a1 && !*b1))
+		if(*a1 != *b)
 			return 0;
 		a1++;
-		b1++;
+		b++;
 	}
 }
 
-static void adddirent(int i, int j, char *f, int size)
+static Dir mkdirent(int j, int dir, int perm, char *name, char *uid, char *gid, int size)
 {
 	Dir d = { { 0, 0, 0 }, 0, 0, 0, 0, "", "", "", "" };
 	d.qid.path = j;
 	d.qid.vers = 0;
-	d.qid.type = f[156] == '5' ? 0x80 : 0;
-	d.mode = (d.qid.type << 24) | oparse(f + 100, 6);
+	d.qid.type = dir ? 0x80 : 0;
+	d.mode = (d.qid.type << 24) | perm;
 	d.length = size;
-	d.name = fname(f);
-	d.uid = f + 265;
-	d.gid = f + 297;
+	d.name = name;
+	d.uid = uid;
+	d.gid = gid;
 	d.muid = d.uid;
-	ds[i].de[ds[i].nde++] = d;
-	print("Adding a new dirent\n");
+	return d;
+}
+
+static void setupdir(File *d, char *path, char *file)
+{
+	char *f = file;
+	while(!memcmp(f + 257, "ustar", 5)) {
+		int size = oparse(f + 124, 11);
+		print("Passing through ");
+		print(f + 345);
+		print("/");
+		print(f);
+		print("\n");
+		if(subent(f + 345, f, path)) {
+			File *nf = malloc(sizeof(File));
+			nf->pos = f;
+			nf->d = mkdirent((int)f, f[156] == '5', oparse(f + 100, 6), fname(f), f + 265, f + 297, size);
+			nf->sub = 0;
+			nf->next = d->sub;
+			d->sub = nf;
+			print("Found ");
+			print(nf->d.name);
+			print("\n");
+			if(f[156] == '5') {
+				char *np = malloc(strlen(path) + strlen(nf->d.name) + 2);
+				print("Enter directory\n");
+				strcpy(np, path);
+				strcat(np, nf->d.name);
+				strcat(np, "/");
+				setupdir(nf, np, file);
+				free(np);
+			}
+		}
+		f += ((size + 1023) / 512) * 512;
+	}
 }
 
 static void setupdirs(char *file)
 {
-	int dirn;
-	char *dir = file;
-	ds[0].pos = file; /* XXX FIXME */
-	ds[0].de = malloc(256 * sizeof(Dir));
-	ds[0].nde = 0;
-	for(dirn = 0; !memcmp(dir + 257, "ustar", 5); dirn++) {
-		int size = oparse(dir + 124, 11);
-		print(dir + 345);
-		print("/");
-		print(dir);
-		if(sstrdir(dir + 345, dir, "", ""))
-			adddirent(0, dirn, dir, size);
-		if(dir[156] == '5') {
-			char *f = file;
-			int i, j;
-			for(i = 0; i < 256; i++) {
-				if(!ds[i].pos) {
-					ds[i].pos = dir;
-					ds[i].de = malloc(256 * sizeof(Dir));
-					ds[i].nde = 0;
-					break;
-				}
-			}
-			for(j = 0; !memcmp(f + 257, "ustar", 5); j++) {
-				int size = oparse(f + 124, 11);
-				if(sstrdir(f + 345, f, dir + 345, dir))
-					adddirent(i, j, f, size);
-				f += ((size + 1023) / 512) * 512;
-			}
-		}
-		dir += ((size + 1023) / 512) * 512;
-	}
+	root = malloc(sizeof(File));
+	root->pos = 0;
+	root->d = mkdirent(0, 1, 0777, "/", "", "", 0);
+	root->sub = 0;
+	root->next = 0;
+	setupdir(root, "/", file);
 }
 
-static ssize_t tpread(File *f, void *buf, size_t len, off_t off)
+static ssize_t tpread(Fid *fid, void *buf, size_t len, off_t off)
 {
-	if(!(f->open & OREAD))
+	if(!(fid->open & OREAD))
 		return -EACCES;
-	if(off + len > f->size)
-		len = f->size - off < 0 ? 0 : f->size - off;
-	memcpy(buf, f->pos + 512 + off, len);
+	if(off + len > fid->f->d.length)
+		len = fid->f->d.length - off < 0 ? 0 : fid->f->d.length - off;
+	memcpy(buf, fid->f->pos + 512 + off, len);
 	return len;
 }
 
-static int sstreq(const char *a1, const char *a2, const char *b1, const char *b2)
+static void examine(File *f, int ind)
 {
-	char *a15 = "/", *b15 = "/";
-	for(;;) {
-		if(!*a1 && a15) {
-			a1 = a15;
-			a15 = a2;
-			a2 = 0;
-		}
-		if(!*b1 && b15) {
-			b1 = b15;
-			b15 = b2;
-			b2 = 0;
-		}
-		if(*a1 != *b1)
-			return 0;
-		if(!*a1 && !*b1)
-			return 1;
-		a1++;
-		b1++;
+	int i;
+	for(i = 0; i < ind; i++)
+		print("\t");
+	print(f->d.name);
+	if(f->d.qid.type & 0x80) {
+		File *de = f->sub;
+		print(" {\n");
+		for(de = f->sub; de != 0; de = de->next)
+			examine(de, ind + 1);
+		for(i = 0; i < ind; i++)
+			print("\t");
+		print("}");
 	}
+	print("\n");
 }
 
 void tarfsserve(int fd, char *file)
 {
-	int i;
 	setupdirs(file);
-	for(i = 0; i < 256; i++) {
-		if(ds[i].pos) {
-			int j;
-			print(ds[i].pos+345);
-			print("/");
-			print(ds[i].pos);
-			print("{\n");
-			for(j = 0; j < ds[i].nde; j++) {
-				print("\t");
-				print(ds[i].de[j].name);
-				print("\n");
-			}
-		}
-	}
-	exits("");
-
-#if 0
-	/* TODO set this up as / */
+	examine(root, 0);
+	fs[0].f = root;
 	fs[0].open = 0;
-	fs[0].pos = file;
-	fs[0].size = 0;
 	for(;;) {
 		Req r = recv(fd);
 		switch(r.fn) {
 		case MSGDEL:
-			fs[r.fid].pos = 0;
+			print("del\n");
+			fs[r.fid].f = 0;
 			fs[r.fid].open = 0;
-			fs[r.fid].size = 0;
 			break;
 		case MSGDUP: {
 			int x;
+			print("dup\n");
 			for(x = 0; x < 256; x++) {
-				if(fs[x].pos == 0) {
-					fs[x].pos = fs[r.fid].pos;
+				if(fs[x].f == 0) {
+					fs[x].f = fs[r.fid].f;
 					fs[x].open = fs[r.fid].open;
-					fs[x].size = fs[r.fid].size;
 					r.u.dup.ret = x;
 					break;
 				}
@@ -203,17 +189,34 @@ void tarfsserve(int fd, char *file)
 			break;
 		}
 		case MSGPREAD:
+			print("pread\n");
 			r.u.rw.ret = tpread(&fs[r.fid], r.u.rw.buf, r.u.rw.len, r.u.rw.off);
 			break;
 		case MSGSTAT:
 			exits("broken");
 			break;
 		case MSGWALK: {
-			char *pos;
-			for(pos = file; pos < 
+			File *f;
+			print("walk\n");
+			r.u.walk.ret = 0;
+			for(f = fs[r.fid].f->sub; f; f = f->next) {
+				if(!strcmp(f->d.name, r.u.walk.path)) {
+					fs[r.fid].f = f;
+					goto endcase;
+				}
+			}
+			r.u.walk.ret = -ENOENT;
+endcase:
 			break;
+		}
 		case MSGOPEN:
-			exits("broken");
+			print("open\n");
+			if(r.u.open.fl & (O_EXCL | O_WRONLY)) {
+				r.u.open.ret = -EACCES;
+			} else {
+				fs[r.fid].open = r.u.open.fl;
+				r.u.open.ret = 0;
+			}
 			break;
 		case MSGPWRITE:
 			r.u.rw.ret = -EACCES;
@@ -224,6 +227,5 @@ void tarfsserve(int fd, char *file)
 		}
 		answer(r, fd);
 	}
-#endif
 }
 

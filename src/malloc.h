@@ -543,6 +543,7 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 /* YAX does not support sbrk */
 #define HAVE_MORECORE 0
 #define HAVE_MMAP 1
+#define MMAP_CLEARS 0 /* it clears to 0xBE */
 #define NO_MALLINFO 1
 #define NO_MALLOC_STATS 1
 #define LACKS_UNISTD_H 1
@@ -565,7 +566,7 @@ MAX_RELEASE_CHECK_RATE   default: 4095 unless not HAVE_MMAP
 #include "printk.h"
 #include "virtmman.h"
 
-#define mmap(ptr, len, prot, fl, fd, off) vpgmap(ptr, len, prot, fl, off)
+#define mmap(ptr, len, prot, fl, fd, off) vpgmap(ptr, len, prot, fl, 0, off, 0)
 #define munmap(ptr, len) (vpgunmap(ptr, len), 0)
 
 /* The maximum possible size_t value has all bits set */

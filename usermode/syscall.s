@@ -1,20 +1,24 @@
 section .text
+
 %macro sys 2
+
 global %1:function (%1.end - %1)
+
 %1:
 	mov eax, %2
 	mov edx, .ret
 	lea ecx, [esp+4]
 	sysenter
-;	ud2
 .ret:
 	sub esp, 4
 	ret
 .end:
+
 %endmacro
+
 sys _exits, 0
 sys rfork, 1
-sys __getprintk, 2;sys exec, 2
+sys exec, 2
 
 sys mkmnt, 3
 
@@ -49,4 +53,6 @@ sys fd2path, 23
 sys fstat, 25
 ;sys wstat, 26
 sys fwstat, 27
+
+sys __getprintk, 28
 

@@ -5,6 +5,7 @@ global _syscall:function (_syscall.end - _syscall)
 extern verusrptr
 extern sys_exits
 extern sys_rfork
+extern sys_exec
 extern sys_mkmnt
 extern sys_mmap
 extern sys_munmap
@@ -134,7 +135,7 @@ section .rodata
 calltable:
 	dd sys_exits
 	dd sys_rfork
-	dd sys_getprintk ;sys_exec
+	dd sys_exec
 	dd sys_mkmnt
 	dd sys_mmap
 	dd sys_munmap
@@ -160,5 +161,6 @@ calltable:
 	dd sys_fstat
 	dd 0 ;sys_wstat
 	dd sys_fwstat
+	dd sys_getprintk ; empty
 .end:
 

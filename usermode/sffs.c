@@ -18,10 +18,10 @@ void sffsserve(int fd, char *file, size_t len)
 			r.u.dup.ret = 0;
 			break;
 		case MSGPREAD:
-			printi(len);
+			/*printi(len);
 			printi(r.u.rw.off);
 			printi(r.u.rw.buf);
-			printi(r.u.rw.len);
+			printi(r.u.rw.len);*/
 			if(r.u.rw.off >= len)
 				r.u.rw.ret = 0;
 			else {
