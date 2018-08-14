@@ -42,7 +42,7 @@ The kernel is roughly divided into 4 parts:
      - mmap, munmap
        - should be optimized (rewrite scheduled)
      - verusrbuf, verusrstr
-     - usrmemget, usrmemmap (WIP)
+     - usrmemget, usrmemmap
  - Task
    - sysentry
      - usermode
@@ -69,11 +69,9 @@ The kernel is roughly divided into 4 parts:
      - connread, connwrite, connseek
      - connpread, connpwrite
      - connstat, connwstat
-   - iofs (Conn implementation) (TODO)
-     - iofsnew
-   - irqfs (Conn implementation) (TODO)
+   - irqfs (Conn implementation)
      - irqfsnew
-   - mnt (Conn implementation) (WIP)
+   - mnt (Conn implementation)
      - mntnew
    - printkfs (Conn implementation)
      - printkfsnew
@@ -84,7 +82,7 @@ The kernel is roughly divided into 4 parts:
      - seems to be working, probably has race conditions
  - Misc
    - exec (depends on mem)
-     - exec (syscall TODO)
+     - exec
        - ELF format
        - calls the entry point with a stack set up, SYSV calling convention:
          - (NORETURN) _start(char *argv, char *envp)
@@ -100,10 +98,7 @@ The kernel is roughly divided into 4 parts:
    - pit
    - port
 
-TODO (in rough order of priority)
- - console driver
- - get a filesystem working
- - implement exec
+TODO (in rough order of priority) (also grep TODO *.[ch])
  - hd driver
  - get more programs working
  - implement /proc
@@ -111,7 +106,6 @@ TODO (in rough order of priority)
  - fix physmman's memory waste
  - fix concurrency issues
  - make virtmman faster
-   - implement CoW
    - use invlpg
  - implement SMP
  - make it fit in a floppy
