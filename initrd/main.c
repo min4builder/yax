@@ -41,11 +41,11 @@ int main(int argc, char **argv)
 	printfd = __getprintk();
 
 	if(rfork(RFPROC|RFFDG)) {
-		exec("/init", "'argv'", "'envp=0'");
+		execve("/init", argv, environ);
 		exits("exec");
 	} else
 		tarfsserve(mnt, &initrd, initrdlen);
 
-	exits(0);
+	return 0;
 }
 

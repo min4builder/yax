@@ -1,4 +1,4 @@
-#define NDEBUG
+/*#define NDEBUG*/
 #include <stdint.h>
 #include <yax/errorcodes.h>
 #include <yax/mapflags.h>

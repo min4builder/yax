@@ -1,6 +1,7 @@
 #include <sys/types.h>
 #include <yax/openflags.h>
 #include "conn.h"
+#include "libk.h"
 #include "lock.h"
 #include "malloc.h"
 #include "multitask.h"

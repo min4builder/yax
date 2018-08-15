@@ -1,9 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
+#include <sys/serve.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <yax/bit.h>
-#include <yax/serve.h>
 #include <yax/stat.h>
 
 Req recv(int fd)

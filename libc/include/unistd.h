@@ -2,6 +2,7 @@
 #define _UNISTD_H
 
 #include <stddef.h>
+#include <sys/types.h>
 
 #define SEEK_SET 0
 #define SEEK_CUR 1
@@ -19,9 +20,13 @@ ssize_t read(int, void *, size_t);
 ssize_t write(int, const void *, size_t);
 int execve(const char *, const char *[], const char *[]);
 
+void _exit(int);
+void exit(int);
+
 pid_t rfork(int);
 int exec(const char *, const char *, const char *);
 void exits(const char *);
+void _exits(const char *);
 
 #endif /* _UNISTD_H */
 

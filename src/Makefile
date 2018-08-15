@@ -1,13 +1,8 @@
-#CC=cparser -target i686-elf
-CC=i686-elf-gcc -fstack-protector-all
-#LD=i686-elf-ld
-LD=$(CC) -ffreestanding
-ASM=nasm -felf32 -g
-CFLAGS=-g -O0 -Wall -Wextra -pedantic
-LDFLAGS=
-CFLAGS+=-I../include -std=c89 -ffreestanding
-LDFLAGS+=-T linker.ld -nostdlib
-LIBS=-lgcc
+include ../config.mk
+LD=i686-yax-ld
+CFLAGS=-std=c89 -ffreestanding
+LDFLAGS=-T linker.ld -nostdlib
+LIBS=
 
 # boot.o must be first
 OBJS = boot.o conn.o exec.o fds.o int.o iofs.o libk.o lock.o main.o malloc.o \
@@ -17,34 +12,31 @@ OBJS = boot.o conn.o exec.o fds.o int.o iofs.o libk.o lock.o main.o malloc.o \
 
 all: yax.bin
 
+headers:
+	cp -r include $(INCLUDEINSTALL)/yax
+
 clean:
 	-$(RM) -f *.o depend.mk yax.bin yax.img yax.sym
 
 yax.img: yax.bin
 	mkfs.msdos -C $@ 1440
-	mcopy -i $@ yax.bin syslinux.cfg ../usermode/initrd ::
+	mcopy -i $@ yax.bin syslinux.cfg ../initrd/initrd ::
 	syslinux $@
 
 yax.sym: yax.bin
 	i686-elf-nm -B yax.bin > $@
 
-test: yax.bin ../usermode/initrd
-	qemu-system-i386 -serial stdio -kernel yax.bin -initrd ../usermode/initrd #2>/dev/null
+test: yax.bin ../initrd/initrd
+	qemu-system-i386 -serial stdio -kernel yax.bin -initrd ../initrd/initrd #2>/dev/null
 
-debug: yax.bin ../usermode/initrd
-	qemu-system-i386 -S -s -serial stdio -kernel yax.bin -initrd ../usermode/initrd 2>/dev/null
+debug: yax.bin ../initrd/initrd
+	qemu-system-i386 -S -s -serial stdio -kernel yax.bin -initrd ../initrd/initrd 2>/dev/null
 
 bochs: yax.img yax.sym
 	bochs -q
 
 yax.bin: $(OBJS) linker.ld
 	$(LD) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
-
-.c.o: $*.c
-	$(CC) $(CFLAGS) -o $@ -c $<
-
-.s.o: $*.s
-	$(ASM) -o $@ $<
 
 include depgen.mk
 

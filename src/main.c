@@ -86,7 +86,7 @@ void kernel_main(MultibootInfo *mbinfo)
 	if(procrfork(RFPROC|RFMEM|RFFDG) != 0)
 		for(;;) idle();
 
-	if((err = execmod(VIRT(mod.start), mod.end - mod.start, &code, "argv", "envp")) < 0 && err > -MAXERR) {
+	if((err = execmod(VIRT(mod.start), mod.end - mod.start, &code, "'argv'", "'envp'")) < 0 && err > -MAXERR) {
 		printk("exec = E");
 		uxprintk(-err);
 		cprintk('\n');

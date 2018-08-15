@@ -19,7 +19,7 @@ fi
 mkdir build-$ARCH-binutils-$ver
 cd build-$ARCH-binutils-$ver
 
-../binutils-$ver/configure --target="$YAX_ARCH-$TARGET" --prefix="$YAX_PREFIX" --with-sysroot --disable-shared --disable-multilib --disable-nls
+../binutils-$ver/configure --target="$YAX_ARCH-$TARGET" --prefix="/" --with-sysroot="$YAX_PREFIX" --disable-shared --disable-multilib --disable-nls
 make -j8
-make install
+make install DESTDIR="$YAX_PREFIX"
 

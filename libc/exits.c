@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "syscall.h"
+#include <unistd.h>
 
 void _fini(void);
 

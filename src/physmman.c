@@ -20,7 +20,7 @@ static int isusable(uintptr_t pg)
 
 static void showregions(void)
 {
-	uintptr_t i, start;
+	uintptr_t i = 0, start;
 	while(i) {
 		while(i && !isusable(i))
 			i += PGLEN;

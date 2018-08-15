@@ -309,6 +309,8 @@ void freeusrptr(PgList *pl, void *p)
 	unref(pl);
 }
 
+void dumpregs(Regs *);
+
 void page_fault(Regs *r, void *addr, uint32_t err)
 {
 	PgEntry pe;
