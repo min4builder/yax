@@ -1,4 +1,4 @@
-/*#define NDEBUG*/
+#define NDEBUG
 #include <stdint.h>
 #include <yax/errorcodes.h>
 #include <yax/mapflags.h>
@@ -97,13 +97,18 @@ int sys_exec(const char *name, const char *argv, const char *envp)
 	printk(envp);
 	printk("\") = ");
 	c = vfsopen(name, OREAD | OEXEC, 0);
-	if(PTRERR(c))
+	if(PTRERR(c)) {
+		iprintk(PTR2ERR(c));
+		printk(";\n");
 		return PTR2ERR(c);
+	}
 	void *newargv = malloc(strlen(argv) + 1);
 	memcpy(newargv, argv, strlen(argv) + 1);
 	void *newenvp = malloc(strlen(envp) + 1);
 	memcpy(newenvp, envp, strlen(envp) + 1);
 	ret = exec(c, &entryp, newargv, newenvp);
+	uxprintk(ret);
+	printk(";\n");
 	unref(c);
 	if(PTRERR(ret))
 		goto bail;

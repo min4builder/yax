@@ -1,3 +1,4 @@
+#define _YAX_
 #include <stdlib.h>
 #include <string.h>
 #include <sys/serve.h>
@@ -20,9 +21,15 @@ Req recv(int fd)
 		break;
 	case MSGPREAD:
 	case MSGPWRITE:
+		m.u.rw.off = GBIT64(buf+13);
+	case MSGREAD:
+	case MSGWRITE:
 		m.u.rw.len = GBIT32(buf+5);
 		m.u.rw.buf = (void *) GBIT32(buf+9);
-		m.u.rw.off = GBIT64(buf+13);
+		break;
+	case MSGSEEK:
+		m.u.seek.off = GBIT64(buf+5);
+		m.u.seek.whence = buf[13];
 		break;
 	case MSGSTAT:
 		exits("Stat");
@@ -48,7 +55,7 @@ Req recv(int fd)
 
 void answer(Req m, int fd)
 {
-	char buf[8];
+	char buf[17];
 	PBIT32(buf, m.fid);
 	switch(m.fn) {
 	case MSGDEL:
@@ -59,15 +66,24 @@ void answer(Req m, int fd)
 		break;
 	case MSGPREAD:
 	case MSGPWRITE:
+	case MSGREAD:
+	case MSGWRITE:
 		PBIT32(buf+4, m.u.rw.ret);
 		break;
+	case MSGSEEK:
+		PBIT64(buf+4, m.u.seek.ret);
+		write(fd, buf, 12);
+		return;
 	case MSGSTAT:
 	case MSGWSTAT:
 		exits("nonsense");
 	case MSGWALK:
 		free(m.u.walk.path);
-		PBIT32(buf+4, m.u.walk.ret);
-		break;
+		PBIT8(buf+4, m.u.walk.ret.type);
+		PBIT64(buf+5, m.u.walk.ret.path);
+		PBIT32(buf+13, m.u.walk.ret.vers);
+		write(fd, buf, 17);
+		return;
 	case MSGOPEN:
 		PBIT32(buf+4, m.u.open.ret);
 		break;

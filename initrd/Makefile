@@ -7,8 +7,12 @@ initrd: main.o tarfs.o initramdisk.o
 
 initramdisk.o: sf
 
-#sf: testexec.o libc.a crt0.o crti.o crtn.o
-#	$(LD) $(LDFLAGS) -o $@ testexec.o $(LIBS)
+sf: init ../drivers/cons
+	mkdir it; mkdir it/dev; mkdir it/bin
+	cp init it/bin/init
+	cp ../drivers/cons it/bin/cons
+	cd it; tar cvf $(PWD)/$@ *
+	rm -rf it
 
 clean:
 	rm -f *.o *.a initrd sf

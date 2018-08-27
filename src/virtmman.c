@@ -32,10 +32,11 @@ PgDir *vpgnew(void)
 {
 	uintptr_t pdp = ppgalloc();
 	PgDir *pd = SPG;
-	map(SPG, mkpg(pdp, PROT_READ | PROT_WRITE, 1));
+	ppgref(pdp);
+	map((uintptr_t) SPG, mkpg(pdp, PROT_READ | PROT_WRITE, 1));
 	memcpy(pd, &kernel_pd, sizeof(*pd));
 	(*pd)[1023] = pdp | PGNOSHARE | PGWRITEABLE | PGPRESENT;
-	unmap(SPG);
+	unmap((uintptr_t) SPG);
 	return (void *) pdp;
 }
 
@@ -47,10 +48,10 @@ PgDir *vpgcopy(int memshare)
 		PgDir *pt = PT(i);
 		if(!((*PGDIR)[i] & PGPRESENT))
 			continue;
-		map(SPG, mkpg((uintptr_t) ppd, PROT_READ | PROT_WRITE, 1));
+		map((uintptr_t) SPG, mkpg((uintptr_t) ppd, PROT_READ | PROT_WRITE, 1));
 		(*(PgDir *)SPG)[i] = (*PGDIR)[i] & ~PGADDR;
 		(*(PgDir *)SPG)[i] |= ppgalloc();
-		map(SPG, mkpg((*(PgDir *)SPG)[i] & PGADDR, PROT_READ | PROT_WRITE, 1));
+		map((uintptr_t) SPG, mkpg((*(PgDir *)SPG)[i] & PGADDR, PROT_READ | PROT_WRITE, 1));
 		for(j = 0; j < 1024; j++) {
 			if(!((*pt)[j] & PGPRESENT)) {
 				if(((*pt)[j] & 0xf) == PGEMPTY) {
@@ -67,15 +68,22 @@ PgDir *vpgcopy(int memshare)
 			}
 		}
 	}
-	unmap(SPG);
+	unmap((uintptr_t) SPG);
 	return ppd;
 }
 
 static void map(uintptr_t pg, PgEntry page)
 {
 	PgDir *pt;
+	printk("map(");
+	uxprintk(pg);
+	printk(", ");
+	uxprintk(page);
+	printk(")");
 	if(!((*PGDIR)[(pg / PGLEN) / 1024] & PGPRESENT)) {
 		unsigned int p = ppgalloc();
+		printk(" alloc PT ");
+		uxprintk(p);
 		(*PGDIR)[(pg / PGLEN) / 1024] = p | PGUSER | PGWRITEABLE | PGPRESENT;
 		ptinval((pg / PGLEN) / 1024);
 		pginval((unsigned int) PT((pg / PGLEN) / 1024) / PGLEN);
@@ -83,27 +91,28 @@ static void map(uintptr_t pg, PgEntry page)
 	pt = PT((pg / PGLEN) / 1024);
 	(*pt)[(pg / PGLEN) % 1024] = page;
 	pginval(pg / PGLEN);
+	printk(";\n");
 }
 
 static uintptr_t findpgs(unsigned int npages, int user)
 {
 	/* can't map at 0 */
-	unsigned int i = user ? 1 : (unsigned int) VIRT(0) / PGLEN;
-	unsigned int limit = user ? MAXUPG : SPG;
+	uintptr_t i = user ? PGLEN : (uintptr_t) VIRT(0);
+	uintptr_t limit = user ? (uintptr_t) MAXUPG : (uintptr_t) SPG;
 	while(i < limit) {
-		unsigned int j = i + npages;
+		uintptr_t j = i + npages * PGLEN;
 		if(j >= limit)
 			break;
-		for(; i < j; i++) {
-			if((*PGDIR)[i / 1024] & PGPRESENT) {
-				PgDir *pt = PT(i / 1024);
-				if((*pt)[i % 1024] & PGPRESENT) {
-					i++;
+		for(; i < j; i += PGLEN) {
+			if((*PGDIR)[(i / PGLEN) / 1024] & PGPRESENT) {
+				PgDir *pt = PT((i / PGLEN) / 1024);
+				if((*pt)[(i / PGLEN) % 1024] & PGPRESENT) {
+					i += PGLEN;
 					goto contwhile;
 				}
 			}
 		}
-		return (j - npages) * PGLEN;
+		return j - npages * PGLEN;
 contwhile:	;
 	}
 	return 0;
@@ -116,14 +125,9 @@ void *vpgmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, Con
 	uintptr_t i;
 	if(flags & MAP_FIXED) {
 		vpgunmap(addr, len);
-		pgs = ((uintptr_t) addr / PGLEN) * PGLEN;
+		pgs = (uintptr_t) addr;
 	} else {
 		pgs = findpgs(npgs, prot & PROT_USER);
-		printk("pgs=0x");
-		uxprintk(pgs);
-		printk(" npgs=0x");
-		uxprintk(npgs);
-		cprintk('\n');
 		if(pgs == 0)
 			return ERR2PTR(-ENOMEM);
 	}
@@ -138,11 +142,8 @@ void *vpgmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, Con
 				map(i, PGEMPTY | (prot << 8) | ((flags & MAP_NOSHARE) << 16));
 			} else {
 				uintptr_t p = ppgalloc();
-				printk("pp=0x");
-				uxprintk(p);
-				cprintk('\n');
 				map(i, mkpg(p, prot, flags & MAP_NOSHARE));
-				memset((void *) i, 0xBE, PGLEN);
+				memset((void *) i, 0xBE, PGLEN - i % PGLEN);
 			}
 		} else {
 			/* TODO FIXME no backing */
@@ -157,9 +158,9 @@ void *vpgmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, Con
 				if(ret < 0)
 					{/* TODO */}
 				/* POSIX says it should be zero-filled */
-				memset(i + ret, 0, PGLEN - ret);
-				if(!(prot & PROT_WRITE))
-					map(i, mkpg(p, prot, flags & MAP_NOSHARE));
+				memset((void *) (i + ret), 0, PGLEN - ret - i % PGLEN);
+				/* undirty the page and maybe remove write perm */
+				map(i, mkpg(p, prot, flags & MAP_NOSHARE));
 			}
 		}
 	}
@@ -178,15 +179,22 @@ static uintptr_t unmap(uintptr_t pg)
 			p = *pe & PGADDR;
 			if((*pe & (PGFILE | PGDIRTY)) == (PGFILE | PGDIRTY)) {
 				/* TODO implement this */
-				printk("Dirty file!!!\n");
+				printk("Dirty file at ");
+				uxprintk(pg);
+				cprintk(' ');
+				uxprintk((*PGDIR)[(pg / PGLEN) / 1024]);
+				cprintk(' ');
+				uxprintk(*pe);
+				cprintk('\n');
 				halt();
 			}
 			*pe = 0;
 			pginval(pg / PGLEN);
 		}
 		for(i = 0; i < 1024; i++) {
-			if((*pt)[i] & PGPRESENT)
+			if((*pt)[i] & PGPRESENT) {
 				return p;
+			}
 		}
 		ppgunref((*PGDIR)[(pg / PGLEN) / 1024] & PGADDR);
 		(*PGDIR)[(pg / PGLEN) / 1024] = 0;
@@ -201,8 +209,9 @@ void vpgunmap(void *addr, size_t len)
 	uintptr_t i;
 	for(i = pgs; i < pgs + len; i += PGLEN) {
 		uintptr_t p = unmap(i);
-		if(p)
+		if(p) {
 			ppgunref(p);
+		}
 	}
 }
 
@@ -254,7 +263,7 @@ int verusrstr(const char *s, enum mapprot prot)
 
 static void freeup(const RefCounted *rc)
 {
-	PgList *pl = rc;
+	PgList *pl = (PgList *) rc;
 	unsigned int i;
 	for(i = 0; i < pl->len; i++)
 		ppgunref(pl->e[i]);
@@ -263,45 +272,44 @@ static void freeup(const RefCounted *rc)
 
 PgList *getusrptr(const void *p, size_t len)
 {
-	unsigned int npgs = (len + PGLEN - 1) / PGLEN;
-	unsigned int pgs = (unsigned int) p / PGLEN;
-	unsigned int i;
+	uintptr_t pgs = (uintptr_t) p;
+	uintptr_t i;
 	PgDir *pt;
-	PgList *pl = calloc(1, sizeof(PgList) + sizeof(PgEntry) * npgs);
-	pl->e = (char *) pl + sizeof(PgList);
+	PgList *pl = calloc(1, sizeof(PgList) + sizeof(PgEntry) * (len / PGLEN));
+	pl->e = (void *) ((char *) pl + sizeof(PgList));
 	mkref(pl, freeup);
-	pl->len = npgs;
-	pl->delta = (char *) p - (char *) (pgs * PGLEN);
-	for(i = pgs; i < pgs + npgs; i++) {
+	pl->len = len;
+	pl->delta = pgs % PGLEN;
+	for(i = pgs; i < pgs + len; i += PGLEN) {
 		/* TODO security */
-		pt = PT(i / 1024);
-		pl->e[i - pgs] = (*pt)[i % 1024] & PGADDR;
-		ppgref(pl->e[i - pgs]);
+		pt = PT((i / PGLEN) / 1024);
+		pl->e[(i - pgs) / PGLEN] = (*pt)[(i / PGLEN) % 1024] & PGADDR;
+		ppgref(pl->e[(i - pgs) / PGLEN]);
 	}
 	return pl;
 }
 
 void *putusrptr(PgList *pl)
 {
-	unsigned int npgs = pl->len;
-	uintptr_t pgs = findpgs(npgs, 1);
+	unsigned int plen = pl->len + PGLEN - pl->len % PGLEN;
+	uintptr_t pgs = findpgs(plen, 1);
 	uintptr_t i;
 	if(pgs == 0)
 		return 0;
 	ref(pl);
-	for(i = pgs; i < pgs + npgs * PGLEN; i += PGLEN) {
+	for(i = pgs; i < pgs + pl->len; i += PGLEN) {
 		/* TODO security */
-		map(i, mkpg(pl->e[i - pgs], PROT_USER | PROT_READ | PROT_WRITE, 1));
+		map(i, mkpg(pl->e[(i - pgs) / PGLEN], PROT_USER | PROT_READ | PROT_WRITE, 1));
 	}
 	return (void *) (pgs + pl->delta);
 }
 
-void freeusrptr(PgList *pl, void *p)
+void freeusrptr(PgList *pl, void *ptr)
 {
 	unsigned int npgs = pl->len;
-	uintptr_t pgs = (uintptr_t) p;
+	uintptr_t pgs = (uintptr_t) ptr;
 	uintptr_t i;
-	for(i = pgs; i < pgs + npgs * PGLEN; i += PGLEN) {
+	for(i = pgs; i < pgs + pl->len; i += PGLEN) {
 		uintptr_t p = unmap(i);
 		if(p)
 			ppgunref(p);
@@ -329,8 +337,8 @@ void page_fault(Regs *r, void *addr, uint32_t err)
 				uintptr_t p2 = *pep & PGADDR;
 				*pep &= ~(PGADDR | PGCOW);
 				*pep |= p | PGWRITEABLE;
-				map(SPG, mkpg(p2, PROT_READ, 1));
-				memcpy(((uintptr_t) addr / PGLEN) * PGLEN, SPG, PGLEN);
+				map((uintptr_t) SPG, mkpg(p2, PROT_READ, 1));
+				memcpy((void *) (((uintptr_t) addr / PGLEN) * PGLEN), SPG, PGLEN);
 				printk(" CoW\n");
 				return;
 			}

@@ -55,6 +55,7 @@ void int_handler(Regs *r, uint8_t n, uint32_t err)
 	}
 	if(n == 13) {
 		dumpregs(r);
+		printk("General protection fault\n");
 		halt();
 	}
 	(void) err;

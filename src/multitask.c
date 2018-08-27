@@ -1,3 +1,4 @@
+#define NDEBUG
 #include <sys/types.h>
 #include <yax/const.h>
 #include <yax/rfflags.h>
@@ -182,8 +183,11 @@ void semsignal(Sem *s, int n)
 				halt();
 			}
 			if(!(s->waiter->blocked == s && s->waiter->blocked2 != 0)) {
-				s->waiter->next = curproc->next;
-				curproc->next = s->waiter;
+				Proc *p = curproc;
+				while(p->next != curproc)
+					p = p->next;
+				s->waiter->next = curproc;
+				p->next = s->waiter;
 			}
 			if(s->waiter->blocked == s) {
 				s->waiter->blocked = 0;

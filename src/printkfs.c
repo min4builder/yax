@@ -30,16 +30,32 @@ static Conn *dup(Conn *c, const char *name)
 	return c;
 }
 
+static ssize_t read(Conn *c, void *buf, size_t len)
+{
+	(void) c, (void) buf, (void) len;
+	return 0;
+}
 static ssize_t pread(Conn *c, void *buf, size_t len, off_t off)
 {
-	(void) c, (void) buf, (void) len, (void) off;
-	return 0;
+	(void) off;
+	return read(c, buf, len);
+}
+static ssize_t write(Conn *c, const void *buf, size_t len)
+{
+	nprintk(len, (const char *) buf);
+	(void) c;
+	return len;
 }
 static ssize_t pwrite(Conn *c, const void *buf, size_t len, off_t off)
 {
-	nprintk(len, (const char *)buf);
-	(void) c, (void) off;
-	return len;
+	(void) off;
+	return write(c, buf, len);
+}
+
+static off_t seek(Conn *c, off_t off, int whence)
+{
+	(void) c, (void) off, (void) whence;
+	return -ESPIPE;
 }
 
 static ssize_t stat(Conn *c, void *buf, size_t len)
@@ -71,7 +87,10 @@ static Dev ops = {
 	del,
 	dup,
 	pread,
+	read,
 	pwrite,
+	write,
+	seek,
 	stat,
 	wstat,
 	walk,

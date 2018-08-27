@@ -1,4 +1,5 @@
-CC=cparser -target i686-yax
+#CC=cparser -target i686-yax
+CC=i686-yax-gcc
 LD=$(CC)
 AR=i686-yax-ar crs
 ASM=nasm -felf32 -g

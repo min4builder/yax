@@ -1,3 +1,4 @@
+#define _YAX_
 #include <stdint.h>
 #include <string.h>
 #include <sys/mount.h>
@@ -41,7 +42,7 @@ int main(int argc, char **argv)
 	printfd = __getprintk();
 
 	if(rfork(RFPROC|RFFDG)) {
-		execve("/init", argv, environ);
+		execve("/bin/init", argv, environ);
 		exits("exec");
 	} else
 		tarfsserve(mnt, &initrd, initrdlen);

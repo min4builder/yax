@@ -20,6 +20,7 @@ enum {
 	EPIPE,
 	ESRCH,
 	EIO,
+	ESPIPE,
 	MAXERR
 };
 

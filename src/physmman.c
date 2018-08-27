@@ -11,7 +11,7 @@ static uint8_t pgs[PGCNT];
 static uint32_t usable[PGCNT / 32];
 static uint32_t reserved[PGCNT / 32];
 static uintptr_t firstfree;
-static unsigned int lastusable;
+static uintptr_t lastusable;
 
 static int isusable(uintptr_t pg)
 {
@@ -20,12 +20,12 @@ static int isusable(uintptr_t pg)
 
 static void showregions(void)
 {
-	uintptr_t i = 0, start;
-	while(i) {
-		while(i && !isusable(i))
+	uint64_t i = 0, start;
+	while(i < PGCNT * PGLEN - 1) {
+		while(i < PGCNT * PGLEN - 1 && !isusable(i))
 			i += PGLEN;
 		start = i;
-		while(i && isusable(i))
+		while(i < PGCNT * PGLEN - 1 && isusable(i))
 			i += PGLEN;
 		printk("usable from 0x");
 		uxprintk(start);
@@ -37,7 +37,7 @@ static void showregions(void)
 
 void ppginit(int mml, MemoryMap *mm_)
 {
-	unsigned int i;
+	uint64_t pg;
 	uint8_t *mmb = (void *)mm_;
 	while(mmb < (uint8_t *) mm_ + mml) {
 		MemoryMap *mm = (void *)mmb;
@@ -47,14 +47,14 @@ void ppginit(int mml, MemoryMap *mm_)
 		uxprintk(mm->base + mm->len);
 		if(mm->type == 1) {
 			printk(" usable\n");
-			for(i = mm->base / PGLEN; i < (mm->base + mm->len) / PGLEN + 1; i++)
-				usable[i >> 5] |= (1 << (i & 0x1F));
+			for(pg = mm->base; pg < mm->base + mm->len; pg += PGLEN)
+				usable[((uintptr_t) pg / PGLEN) >> 5] |= (1 << (((uintptr_t) pg / PGLEN) & 0x1F));
 		} else {
 			printk(" type ");
 			iprintk(mm->type);
 			cprintk('\n');
-			for(i = mm->base / PGLEN; i < (mm->base + mm->len) / PGLEN + 1; i++)
-				reserved[i >> 5] |= (1 << (i & 0x1F));
+			for(pg = mm->base; pg < mm->base + mm->len; pg += PGLEN)
+				reserved[((uintptr_t) pg / PGLEN) >> 5] |= (1 << (((uintptr_t) pg / PGLEN) & 0x1F));
 		}
 		mmb += mm->size + sizeof(mm->size);
 	}
@@ -63,27 +63,25 @@ void ppginit(int mml, MemoryMap *mm_)
 	printk(" to 0x");
 	uxprintk(KERNEL_LOAD_END);
 	cprintk('\n');
-	for(i = KERNEL_LOAD / PGLEN; i < KERNEL_LOAD_END / PGLEN; i++)
-		reserved[i >> 5] |= (1 << (i & 0x1F));
-	for(i = 0; i < PGCNT; i++) {
-		if(isusable(i * PGLEN)) {
-			firstfree = i * PGLEN;
+	for(pg = KERNEL_LOAD; pg < KERNEL_LOAD_END; pg += PGLEN)
+		reserved[((uintptr_t) pg / PGLEN) >> 5] |= (1 << (((uintptr_t) pg / PGLEN) & 0x1F));
+	for(pg = 0; pg < PGCNT * PGLEN - 1; pg += PGLEN) {
+		if(isusable(pg)) {
+			firstfree = pg;
 			break;
 		}
 	}
-	for(i = 0; i < PGCNT; i++) {
-		if(isusable(i * PGLEN))
-			lastusable = i;
+	for(pg = 0; pg < PGCNT * PGLEN - 1; pg += PGLEN) {
+		if(isusable(pg))
+			lastusable = pg;
 	}
 	showregions();
 }
 
 uintptr_t ppgalloc(void)
 {
-	static int time = 0;
 	uintptr_t i;
 	uintptr_t pg = firstfree;
-	time++;
 	if(pgs[pg / PGLEN] != 0) {
 		printk("NOMEM\n");
 		halt();
@@ -100,15 +98,29 @@ uintptr_t ppgalloc(void)
 
 void ppgref(uintptr_t pg)
 {
-/*	if(pgs[pg] == 0 || pgs[pg] == 0xFF)
-		error;*/
+	printk("ppgref(");
+	uxprintk(pg);
+	printk(");\n");
+	if(pgs[pg / PGLEN] == 0 || pgs[pg / PGLEN] == 0xFF) {
+		printk("Page ");
+		uxprintk(pg);
+		printk(" wrongly referenced\n");
+		halt();
+	}
 	pgs[pg / PGLEN]++;
 }
 
 void ppgunref(uintptr_t pg)
 {
-/*	if(pgs[pg] == 0)
-		error;*/
+	printk("ppgunref(");
+	uxprintk(pg);
+	printk(");\n");
+	if(pgs[pg / PGLEN] == 0) {
+		printk("Page ");
+		uxprintk(pg);
+		printk(" underreferenced\n");
+		halt();
+	}
 	pgs[pg / PGLEN]--;
 	if(pgs[pg / PGLEN] == 0 && firstfree > pg && isusable(pg))
 		firstfree = pg;
@@ -116,8 +128,11 @@ void ppgunref(uintptr_t pg)
 
 void ppgreserve(uintptr_t pg)
 {
-/*	if(pgs[pg] != 0 || isusable(pg))
-		error;*/
 	pgs[pg / PGLEN]++;
+	if(pgs[pg] != 1 || isusable(pg)) {
+		printk("Page ");
+		uxprintk(pg);
+		printk(" was reserved or usable\n");
+	}
 }
 

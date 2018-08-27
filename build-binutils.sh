@@ -16,8 +16,8 @@ elif ! [ -d binutils-$ver ]; then
 	cd ..
 fi
 
-mkdir build-$ARCH-binutils-$ver
-cd build-$ARCH-binutils-$ver
+mkdir build-$YAX_ARCH-binutils-$ver
+cd build-$YAX_ARCH-binutils-$ver
 
 ../binutils-$ver/configure --target="$YAX_ARCH-$TARGET" --prefix="/" --with-sysroot="$YAX_PREFIX" --disable-shared --disable-multilib --disable-nls
 make -j8

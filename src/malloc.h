@@ -13,13 +13,7 @@
 
 /** @{ */
 
-
-
-// If we are told to not define our own size_t, then we skip the define.
-//#define _HAVE_UINTPTR_T
-//typedef	unsigned long	uintptr_t;
-
-//This lets you prefix malloc and friends
+/* This lets you prefix malloc and friends */
 #define PREFIX(func)		func
 
 #ifdef __cplusplus
@@ -35,7 +29,6 @@ extern Lock liballoc_lock;
  * \return 0 if the lock was acquired successfully. Anything else is
  * failure.
  */
-//extern int liballoc_lock();
 #define liballoc_lock() locklock(&liballoc_lock)
 
 /** This function unlocks what was previously locked by the liballoc_lock
@@ -44,7 +37,6 @@ extern Lock liballoc_lock;
  *
  * \return 0 if the lock was successfully released.
  */
-//extern int liballoc_unlock();
 #define liballoc_unlock() lockunlock(&liballoc_lock)
 
 /** This is the hook into the local system which allocates pages. It
@@ -54,7 +46,6 @@ extern Lock liballoc_lock;
  * \return NULL if the pages were not allocated.
  * \return A pointer to the allocated memory.
  */
-//extern void* liballoc_alloc(size_t);
 #define liballoc_alloc(n) vpgmap(0, (n) * l_pageSize, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, 0, 0, 0)
 
 /** This frees previously allocated memory. The void* parameter passed
@@ -65,16 +56,15 @@ extern Lock liballoc_lock;
  *
  * \return 0 if the memory was successfully freed.
  */
-//extern int liballoc_free(void*,size_t);
 #define liballoc_free(p, l) vpgunmap((p), (l) * l_pageSize)
 
 #define l_pageSize 4096
        
 
-extern void    *PREFIX(malloc)(size_t);				///< The standard function.
-extern void    *PREFIX(realloc)(void *, size_t);		///< The standard function.
-extern void    *PREFIX(calloc)(size_t, size_t);		///< The standard function.
-extern void     PREFIX(free)(void *);					///< The standard function.
+extern void    *PREFIX(malloc)(size_t);				/* The standard function. */
+extern void    *PREFIX(realloc)(void *, size_t);		/* The standard function. */
+extern void    *PREFIX(calloc)(size_t, size_t);		/* The standard function. */
+extern void     PREFIX(free)(void *);					/* The standard function. */
 
 
 #ifdef __cplusplus

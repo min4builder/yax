@@ -1,6 +1,6 @@
 include ../config.mk
 LD=i686-yax-ld
-CFLAGS=-std=c89 -ffreestanding
+CFLAGS+=-std=c89 -ffreestanding -Werror
 LDFLAGS=-T linker.ld -nostdlib
 LIBS=
 
@@ -13,7 +13,7 @@ OBJS = boot.o conn.o exec.o fds.o int.o iofs.o libk.o lock.o main.o malloc.o \
 all: yax.bin
 
 headers:
-	cp -r include $(INCLUDEINSTALL)/yax
+	mkdir -p $(INCLUDEINSTALL)/yax; cp -R include/* $(INCLUDEINSTALL)/yax/
 
 clean:
 	-$(RM) -f *.o depend.mk yax.bin yax.img yax.sym

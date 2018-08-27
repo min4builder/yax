@@ -5,6 +5,7 @@
 void (mkref)(RefCounted *rc, void (*free)(const RefCounted *))
 {
 	rc->refcnt = 1;
+	rc->l = 0;
 	rc->free = free;
 }
 

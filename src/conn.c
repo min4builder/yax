@@ -1,3 +1,4 @@
+#define NDEBUG
 #include <sys/types.h>
 #include <yax/openflags.h>
 #include "conn.h"
@@ -5,11 +6,12 @@
 #include "malloc.h"
 #include "multitask.h"
 #include "pipe.h"
+#include "printk.h"
 #include "ref.h"
 
 static void cfree(const RefCounted *rc)
 {
-	Conn *c = rc;
+	Conn *c = (Conn *) rc;
 	c->dev->del(c);
 }
 void conninit(Conn *c, const char *name, Qid qid, Dev *dev, void *inst)
@@ -21,61 +23,117 @@ void conninit(Conn *c, const char *name, Qid qid, Dev *dev, void *inst)
 	c->qid = qid;
 	c->dev = dev;
 	c->inst = inst;
-	c->off = 0;
 }
 
 int connopen(Conn *c, int fl, int mode)
 {
-	return c->dev->open(c, fl, mode);
+	int ret;
+	printk("{Open ");
+	iprintk(fl);
+	if(fl & O_CREAT) {
+		cprintk(' ');
+		iprintk(mode);
+	}
+	printk(" = ");
+	ret = c->dev->open(c, fl, mode);
+	iprintk(ret);
+	cprintk('}');
+	return ret;
 }
 Conn *conndup(Conn *c, const char *name)
 {
+	printk("{Dup}");
 	return c->dev->dup(c, name);
 }
 int connwalk(Conn *c, const char *elem)
 {
-	return c->dev->walk(c, elem);
+	int i;
+	printk("{Walk ");
+	for(i = 0; elem[i] && elem[i] != '/'; i++)
+		cprintk(elem[i]);
+	printk(" = ");
+	i = c->dev->walk(c, elem);
+	iprintk(i);
+	cprintk('}');
+	return i;
 }
 
 ssize_t connread(Conn *c, void *buf, size_t len)
 {
-	ssize_t ret = c->dev->pread(c, buf, len, c->off);
-	if(ret > 0)
-		c->off += ret;
+	ssize_t ret;
+	printk("{Read ");
+	iprintk(len);
+	printk(" = ");
+	ret = c->dev->read(c, buf, len);
+	if(ret > 0) {
+		cprintk('"');
+		nprintk(ret, buf);
+		printk("\" ");
+	}
+	iprintk(ret);
+	cprintk('}');
 	return ret;
 }
 ssize_t connwrite(Conn *c, const void *buf, size_t len)
 {
-	ssize_t ret = c->dev->pwrite(c, buf, len, c->off);
-	if(ret > 0)
-		c->off += ret;
+	ssize_t ret;
+	printk("{Write ");
+	iprintk(len);
+	printk(" \"");
+	nprintk(len, buf);
+	printk("\" = ");
+	ret = c->dev->write(c, buf, len);
+	iprintk(ret);
+	cprintk('}');
 	return ret;
 }
+
 off_t connseek(Conn *c, off_t off, int whence)
 {
-	switch(whence) {
-	case 0:
-		c->off = off;
-		break;
-	case 1:
-		c->off += off;
-		break;
-	case 2:
-		/* TODO */
-		return -1;
-	default:
-		return -1;
-	}
-	return 0;
+	off_t ret;
+	printk("{Seek ");
+	iprintk(off);
+	cprintk(' ');
+	iprintk(whence);
+	printk(" = ");
+	ret = c->dev->seek(c, off, whence);
+	iprintk(ret);
+	cprintk('}');
+	return ret;
 }
 
 ssize_t connpread(Conn *c, void *buf, size_t len, off_t off)
 {
-	return c->dev->pread(c, buf, len, off);
+	ssize_t ret;
+	printk("{Pread ");
+	iprintk(len);
+	cprintk(' ');
+	iprintk(off);
+	printk(" = ");
+	ret = c->dev->pread(c, buf, len, off);
+	if(ret > 0) {
+		cprintk('"');
+		nprintk(ret, buf);
+		printk("\" ");
+	}
+	iprintk(ret);
+	cprintk('}');
+	return ret;
 }
 ssize_t connpwrite(Conn *c, const void *buf, size_t len, off_t off)
 {
-	return c->dev->pwrite(c, buf, len, off);
+	ssize_t ret;
+	printk("{Pwrite ");
+	iprintk(len);
+	cprintk(' ');
+	iprintk(off);
+	printk(" \"");
+	nprintk(len, buf);
+	printk("\" = ");
+	ret = c->dev->pwrite(c, buf, len, off);
+	iprintk(ret);
+	cprintk('}');
+	return ret;
 }
 
 ssize_t connstat(Conn *c, void *buf, size_t len)

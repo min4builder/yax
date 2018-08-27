@@ -6,7 +6,7 @@
 static void ffree(const RefCounted *rc)
 {
 	unsigned int i;
-	FdList *fl = rc;
+	FdList *fl = (FdList *) rc;
 	if(fl->list) {
 		for(i = 0; i < fl->len; i++) {
 			if(fl->list[i])

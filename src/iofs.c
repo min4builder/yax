@@ -17,6 +17,11 @@ typedef struct {
 	int n;
 } IoConn;
 
+typedef struct {
+	Conn c;
+	off_t off;
+} DirConn;
+
 static Sem irqsem[16];
 static Lock irqlock[16];
 
@@ -34,11 +39,11 @@ static Dev idev;
 
 Conn *iofsnew(void)
 {
-	IoConn *rd = calloc(1, sizeof(*rd) + 1);
+	DirConn *rd = calloc(1, sizeof(*rd) + 1);
 	char *name = calloc(1, 1);
 	Qid qid = { 0x84, 0, 0 };
 	conninit((Conn *)rd, name, qid, &rdev, rd);
-	return rd;
+	return (Conn *) rd;
 }
 
 static void del(Conn *c)
@@ -47,12 +52,26 @@ static void del(Conn *c)
 	free(c);
 }
 
-static Conn *dup(Conn *c, const char *name)
+static Conn *iodup(Conn *c, const char *name)
 {
 	IoConn *d = calloc(1, sizeof(*d));
 	memcpy(d, c, sizeof(*d));
-	c->name = name;
-	return d;
+	c->name = (char *) name;
+	return (Conn *) d;
+}
+
+static Conn *dirdup(Conn *c, const char *name)
+{
+	DirConn *d = calloc(1, sizeof(*d));
+	memcpy(d, c, sizeof(*d));
+	c->name = (char *) name;
+	return (Conn *) d;
+}
+
+static off_t pipeseek(Conn *c, off_t off, int whence)
+{
+	(void) c, (void) off, (void) whence;
+	return -ESPIPE;
 }
 
 static ssize_t dirpreadelem(size_t *rlen, size_t *tlen, void **buf, size_t *len, off_t off, Dir *d)
@@ -70,13 +89,29 @@ static ssize_t dirpreadelem(size_t *rlen, size_t *tlen, void **buf, size_t *len,
 	return 1; /* continue */
 }
 
-static ssize_t dirpwrite(Conn *c, const void *buf, size_t len, off_t off)
+static off_t dirseek(Conn *c, off_t off, int whence)
 {
-	(void) c, (void) buf, (void) len, (void) off;
-	return -EACCES;
+	if(whence == 1)
+		off += ((DirConn *) c)->off;
+	else if(whence == 2)
+		return -EINVAL;
+	if(off != 0 && off != ((DirConn *) c)->off)
+		return -EINVAL;
+	return (((DirConn *) c)->off = off);
 }
 
-static ssize_t dirwstat(Conn *c, const void *buf, size_t len)
+static ssize_t errwrite(Conn *c, const void *buf, size_t len)
+{
+	(void) c, (void) buf, (void) len;
+	return -EACCES;
+}
+static ssize_t errpwrite(Conn *c, const void *buf, size_t len, off_t off)
+{
+	(void) off;
+	return errwrite(c, buf, len);
+}
+
+static ssize_t errwstat(Conn *c, const void *buf, size_t len)
 {
 	(void) c, (void) buf, (void) len;
 	return -EACCES;
@@ -109,6 +144,13 @@ static ssize_t rpread(Conn *c, void *buf, size_t len, off_t off)
 	(void) c;
 	return rlen;
 }
+static ssize_t rread(Conn *c, void *buf, size_t len)
+{
+	ssize_t ret = rpread(c, buf, len, ((DirConn *) c)->off);
+	if(ret > 0)
+		((DirConn *) c)->off += ret;
+	return ret;
+}
 
 static ssize_t rstat(Conn *c, void *buf, size_t len)
 {
@@ -134,11 +176,14 @@ static int rwalk(Conn *c, const char *path)
 
 static Dev rdev = {
 	del,
-	dup,
+	dirdup,
 	rpread,
-	dirpwrite,
+	rread,
+	errpwrite,
+	errwrite,
+	dirseek,
 	rstat,
-	dirwstat,
+	errwstat,
 	rwalk,
 	diropen
 };
@@ -163,6 +208,13 @@ static ssize_t pdpread(Conn *c, void *buf, size_t len, off_t off)
 	}
 	(void) c;
 	return rlen;
+}
+static ssize_t pdread(Conn *c, void *buf, size_t len)
+{
+	ssize_t ret = pdpread(c, buf, len, ((DirConn *) c)->off);
+	if(ret > 0)
+		((DirConn *) c)->off += ret;
+	return ret;
 }
 
 static ssize_t pdstat(Conn *c, void *buf, size_t len)
@@ -210,7 +262,7 @@ static int pdwalk(Conn *c, const char *path)
 	else
 		return -ENOENT;
 	qid.path = 3 + n;
-	((IoConn *)c)->n = n;
+	((IoConn *) c)->n = n;
 	c->qid = qid;
 	c->dev = &pdev;
 	return 0;
@@ -218,11 +270,14 @@ static int pdwalk(Conn *c, const char *path)
 
 static Dev pddev = {
 	del,
-	dup,
+	dirdup,
 	pdpread,
-	dirpwrite,
+	pdread,
+	errpwrite,
+	errwrite,
+	dirseek,
 	pdstat,
-	dirwstat,
+	errwstat,
 	pdwalk,
 	diropen
 };
@@ -244,6 +299,13 @@ static ssize_t idpread(Conn *c, void *buf, size_t len, off_t off)
 	}
 	(void) c;
 	return rlen;
+}
+static ssize_t idread(Conn *c, void *buf, size_t len)
+{
+	ssize_t ret = idpread(c, buf, len, ((DirConn *) c)->off);
+	if(ret > 0)
+		((DirConn *) c)->off += ret;
+	return ret;
 }
 
 static ssize_t idstat(Conn *c, void *buf, size_t len)
@@ -278,41 +340,46 @@ static int idwalk(Conn *c, const char *path)
 
 static Dev iddev = {
 	del,
-	dup,
+	dirdup,
 	idpread,
-	dirpwrite,
+	idread,
+	errpwrite,
+	errwrite,
+	dirseek,
 	idstat,
-	dirwstat,
+	errwstat,
 	idwalk,
 	diropen
 };
 
-static ssize_t ppread(Conn *c, void *buf, size_t len, off_t off)
+static ssize_t pread(Conn *c, void *buf, size_t len)
 {
-	int p = ((IoConn *)c)->n;
-	switch(len) {
-	case 1:
-		*(uint8_t *)buf = inb(p);
-		break;
-	default:
+	int p = ((IoConn *) c)->n;
+	if(len == 1)
+		*(uint8_t *) buf = inb(p);
+	else
 		return -EIO;
-	}
-	(void) off;
 	return len;
 }
+static ssize_t ppread(Conn *c, void *buf, size_t len, off_t off)
+{
+	(void) off;
+	return pread(c, buf, len);
+}
 
-static ssize_t ppwrite(Conn *c, const void *buf, size_t len, off_t off)
+static ssize_t pwrite(Conn *c, const void *buf, size_t len)
 {
 	int p = ((IoConn *)c)->n;
-	switch(len) {
-	case 1:
+	if(len == 1)
 		outb(p, *(uint8_t *)buf);
-		break;
-	default:
+	else
 		return -EIO;
-	}
-	(void) off;
 	return len;
+}
+static ssize_t ppwrite(Conn *c, const void *buf, size_t len, off_t off)
+{
+	(void) off;
+	return pwrite(c, buf, len);
 }
 
 static ssize_t pstat(Conn *c, void *buf, size_t len)
@@ -341,23 +408,30 @@ static int popen(Conn *c, int fl, int mode)
 
 static Dev pdev = {
 	del,
-	dup,
+	iodup,
 	ppread,
+	pread,
 	ppwrite,
+	pwrite,
+	pipeseek,
 	pstat,
-	dirwstat,
+	errwstat,
 	fwalk,
 	popen
 };
 
-static ssize_t ipread(Conn *c, void *buf, size_t len, off_t off)
+static ssize_t iread(Conn *c, void *buf, size_t len)
 {
 	if(len < 4)
 		return -1;
 	semwait(&irqsem[((IoConn *)c)->n], 1);
 	PBIT32(buf, 1);
-	(void) off;
 	return 4;
+}
+static ssize_t ipread(Conn *c, void *buf, size_t len, off_t off)
+{
+	(void) off;
+	return iread(c, buf, len);
 }
 
 static ssize_t istat(Conn *c, void *buf, size_t len)
@@ -383,11 +457,14 @@ static int iopen(Conn *c, int fl, int mode)
 
 static Dev idev = {
 	del,
-	dup,
+	iodup,
 	ipread,
-	dirpwrite,
+	iread,
+	errpwrite,
+	errwrite,
+	pipeseek,
 	istat,
-	dirwstat,
+	errwstat,
 	fwalk,
 	iopen
 };

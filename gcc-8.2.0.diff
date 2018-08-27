@@ -1,0 +1,146 @@
+diff -crN a/config.sub b/config.sub
+*** a/config.sub	2018-08-19 15:52:51.933421180 -0300
+--- b/config.sub	2018-08-19 15:55:06.160079160 -0300
+***************
+*** 1390,1396 ****
+  	# The portable systems comes first.
+  	# Each alternative MUST end in a * to match a version number.
+  	# -sysv* is not here because it comes later, after sysvr4.
+! 	-gnu* | -bsd* | -mach* | -minix* | -genix* | -ultrix* | -irix* \
+  	      | -*vms* | -sco* | -esix* | -isc* | -aix* | -cnk* | -sunos | -sunos[34]*\
+  	      | -hpux* | -unos* | -osf* | -luna* | -dgux* | -auroraux* | -solaris* \
+  	      | -sym* | -kopensolaris* | -plan9* \
+--- 1390,1396 ----
+  	# The portable systems comes first.
+  	# Each alternative MUST end in a * to match a version number.
+  	# -sysv* is not here because it comes later, after sysvr4.
+! 	-gnu* | -bsd* | -mach* | -minix* | -yax* | -genix* | -ultrix* | -irix* \
+  	      | -*vms* | -sco* | -esix* | -isc* | -aix* | -cnk* | -sunos | -sunos[34]*\
+  	      | -hpux* | -unos* | -osf* | -luna* | -dgux* | -auroraux* | -solaris* \
+  	      | -sym* | -kopensolaris* | -plan9* \
+diff -crN a/contrib/download_prerequisites b/contrib/download_prerequisites
+*** a/contrib/download_prerequisites	2018-08-19 15:52:45.280088287 -0300
+--- b/contrib/download_prerequisites	2018-08-19 15:53:21.873419266 -0300
+***************
+*** 51,57 ****
+      chksum='shasum -a 512 --check'
+    ;;
+    *)
+!     chksum='sha512sum --check'
+    ;;
+  esac
+  
+--- 51,57 ----
+      chksum='shasum -a 512 --check'
+    ;;
+    *)
+!     chksum='sha512sum -c'
+    ;;
+  esac
+  
+diff -crN a/fixincludes/mkfixinc.sh b/fixincludes/mkfixinc.sh
+*** a/fixincludes/mkfixinc.sh	2018-08-19 15:52:45.080088300 -0300
+--- b/fixincludes/mkfixinc.sh	2018-08-19 16:21:58.423308650 -0300
+***************
+*** 19,25 ****
+      powerpc-*-rtems*   | \
+      powerpcle-*-eabisim* | \
+      powerpcle-*-eabi* | \
+!     *-musl* )
+  	#  IF there is no include fixing,
+  	#  THEN create a no-op fixer and exit
+  	(echo "#! /bin/sh" ; echo "exit 0" ) > ${target}
+--- 19,26 ----
+      powerpc-*-rtems*   | \
+      powerpcle-*-eabisim* | \
+      powerpcle-*-eabi* | \
+!     *-musl* | \
+!     *-yax* )
+  	#  IF there is no include fixing,
+  	#  THEN create a no-op fixer and exit
+  	(echo "#! /bin/sh" ; echo "exit 0" ) > ${target}
+diff -crN a/gcc/config/yax.h b/gcc/config/yax.h
+*** a/gcc/config/yax.h	1969-12-31 21:00:00.000000000 -0300
+--- b/gcc/config/yax.h	2018-08-19 16:23:08.473304083 -0300
+***************
+*** 0 ****
+--- 1,28 ----
++ #undef TARGET_YAX
++ #define TARGET_YAX 1
++ 
++ #undef LIB_SPEC
++ #define LIB_SPEC "-lc"
++ 
++ #undef STANDARD_STARTFILE_PREFIX
++ #define STANDARD_STARTFILE_PREFIX "/lib/"
++ 
++ #undef STARTFILE_SPEC
++ #define STARTFILE_SPEC "crt0.o%s crti.o%s crtbegin.o%s"
++ 
++ #undef ENDFILE_SPEC
++ #define ENDFILE_SPEC "crtend.o%s crtn.o%s"
++ 
++ #undef NO_IMPLICIT_EXTERN_C
++ #define NO_IMPLICIT_EXTERN_C 1
++ 
++ #undef TARGET_OS_CPP_BUILTINS
++ #define TARGET_OS_CPP_BUILTINS() \
++ 	do { \
++ 		builtin_define("__yax__"); \
++ 		builtin_define("__unix__"); \
++ 		builtin_assert("system=yax"); \
++ 		builtin_assert("system=unix"); \
++ 		builtin_assert("system=posix"); \
++ 	} while(0)
++ 
+diff -crN a/gcc/config.gcc b/gcc/config.gcc
+*** a/gcc/config.gcc	2018-08-19 15:52:46.900088178 -0300
+--- b/gcc/config.gcc	2018-08-19 16:06:37.133367986 -0300
+***************
+*** 930,935 ****
+--- 930,942 ----
+        ;;
+    esac
+    ;;
++ *-*-yax*)
++   gas=yes
++   gnu_ld=yes
++   default_use_cxa_exit=yes
++   native_system_header_dir=/include
++   use_gcc_stdint=provide
++   ;;
+  *-*-elf|arc*-*-elf*)
+    # Assume that newlib is being used and so __cxa_atexit is provided.
+    default_use_cxa_atexit=yes
+***************
+*** 1835,1840 ****
+--- 1842,1853 ----
+  	tmake_file="${tmake_file} i386/t-x86_64-elf"
+  	tm_file="${tm_file} i386/unix.h i386/att.h elfos.h newlib-stdint.h i386/i386elf.h i386/x86-64.h fuchsia.h"
+  	;;
++ i[34567]86-*-yax*)
++ 	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h glibc-stdint.h i386/i386elf.h yax.h"
++ 	;;
++ x86_64-*-yax*)
++ 	tm_file="${tm_file} i386/unix.h i386/att.h dbxelf.h elfos.h glibc-stdint.h i386/i386elf.h i386/x86-64.h yax.h"
++ 	;;
+  ia64*-*-elf*)
+  	tm_file="${tm_file} dbxelf.h elfos.h newlib-stdint.h ia64/sysv4.h ia64/elf.h"
+  	tmake_file="ia64/t-ia64"
+Binary files a/isl-0.18.tar.bz2 and b/isl-0.18.tar.bz2 differ
+diff -crN a/libgcc/config.host b/libgcc/config.host
+*** a/libgcc/config.host	2018-08-19 15:52:45.183421627 -0300
+--- b/libgcc/config.host	2018-08-19 16:21:16.716644642 -0300
+***************
+*** 784,789 ****
+--- 784,793 ----
+  		extra_parts="$extra_parts vtv_start.o vtv_end.o vtv_start_preinit.o vtv_end_preinit.o"
+  	fi
+  	;;
++ i[34567]86-*-yax*)
++ 	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
++ 	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
++ 	;;
+  ia64*-*-elf*)
+  	extra_parts="$extra_parts crtbeginS.o crtendS.o crtfastmath.o"
+  	tmake_file="ia64/t-ia64 ia64/t-ia64-elf ia64/t-eh-ia64 t-crtfm t-softfp-tf ia64/t-softfp t-softfp ia64/t-softfp-compat"

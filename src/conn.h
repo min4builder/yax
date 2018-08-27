@@ -12,7 +12,10 @@ typedef struct {
 	void (*del)(Conn *);
 	Conn *(*dup)(Conn *, const char *name);
 	ssize_t (*pread)(Conn *, void *, size_t, off_t);
+	ssize_t (*read)(Conn *, void *, size_t);
 	ssize_t (*pwrite)(Conn *, const void *, size_t, off_t);
+	ssize_t (*write)(Conn *, const void *, size_t);
+	off_t (*seek)(Conn *, off_t, int);
 	ssize_t (*stat)(Conn *, void *, size_t);
 	ssize_t (*wstat)(Conn *, const void *, size_t);
 	int (*walk)(Conn *, const char *path);
@@ -25,7 +28,6 @@ struct Conn {
 	void *inst;
 	char *name;
 	Qid qid;
-	off_t off;
 };
 
 void conninit(Conn *, const char *, Qid, Dev *, void *);

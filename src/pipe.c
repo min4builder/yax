@@ -53,13 +53,13 @@ void pipenew(Conn *cs[2])
 	ps[0]->b = b;
 	ps[1]->a = b;
 	ps[1]->b = a;
-	cs[0] = ps[0];
-	cs[1] = ps[1];
+	cs[0] = (Conn *) ps[0];
+	cs[1] = (Conn *) ps[1];
 }
 
 static void del(Conn *c)
 {
-	Pipe *p = c;
+	Pipe *p = (Pipe *) c;
 	if(p->other) {
 		p->other->other = 0;
 		p->other->a = 0;
@@ -78,9 +78,9 @@ static Conn *dup(Conn *c, const char *name)
 	return c;
 }
 
-static ssize_t pread(Conn *c, void *buf, size_t len, off_t off)
+static ssize_t read(Conn *c, void *buf, size_t len)
 {
-	Pipe *p = c;
+	Pipe *p = (Pipe *) c;
 	size_t endlen;
 	Buf *b = p->b;
 	semwait(&b->filled, 1);
@@ -97,12 +97,16 @@ static ssize_t pread(Conn *c, void *buf, size_t len, off_t off)
 		b->begin = (b->begin + len) % BUFLEN;
 	}
 	semsignal(&b->empty, len);
-	(void) off;
 	return len;
 }
-static ssize_t pwrite(Conn *c, const void *buf, size_t totallen, off_t off)
+static ssize_t pread(Conn *c, void *buf, size_t len, off_t off)
 {
-	Pipe *p = c;
+	(void) off;
+	return read(c, buf, len);
+}
+static ssize_t write(Conn *c, const void *buf, size_t totallen)
+{
+	Pipe *p = (Pipe *) c;
 	size_t endlen, len = 0;
 	Buf *a = p->a;
 	if(!a)
@@ -124,16 +128,26 @@ static ssize_t pwrite(Conn *c, const void *buf, size_t totallen, off_t off)
 		semsignal(&a->filled, len);
 		buf = (char *)buf + len;
 	}
-	(void) off;
 	return len;
+}
+static ssize_t pwrite(Conn *c, const void *buf, size_t len, off_t off)
+{
+	(void) off;
+	return write(c, buf, len);
+}
+
+static off_t seek(Conn *c, off_t off, int whence)
+{
+	(void) c, (void) off, (void) whence;
+	return -ESPIPE;
 }
 
 static ssize_t stat(Conn *c, void *buf, size_t len)
 {
 	Dir d = { { 0x44, 0, 0 }, 0x44000180, 0, 0, 0, "", "", "", "" };
 	d.qid = c->qid;
-	if(((Pipe *)c)->b)
-		d.length = ((Pipe *)c)->b->len;
+	if(((Pipe *) c)->b)
+		d.length = ((Pipe *) c)->b->len;
 	return convD2M(&d, buf, len);
 }
 static ssize_t wstat(Conn *c, const void *buf, size_t len)
@@ -159,7 +173,10 @@ static Dev dev = {
 	del,
 	dup,
 	pread,
+	read,
 	pwrite,
+	write,
+	seek,
 	stat,
 	wstat,
 	walk,

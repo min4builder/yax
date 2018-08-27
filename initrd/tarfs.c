@@ -1,3 +1,4 @@
+#define _YAX_
 #include <stdlib.h>
 #include <string.h>
 #include <sys/serve.h>
@@ -17,6 +18,7 @@ struct File {
 
 typedef struct {
 	File *f;
+	off_t off;
 	int open;
 } Fid;
 
@@ -188,9 +190,25 @@ void tarfsserve(int fd, char *file)
 			}
 			break;
 		}
+		case MSGREAD:
+			r.u.rw.off = fs[r.fid].off;
 		case MSGPREAD:
 			print("pread\n");
 			r.u.rw.ret = tpread(&fs[r.fid], r.u.rw.buf, r.u.rw.len, r.u.rw.off);
+			break;
+		case MSGSEEK:
+			switch(r.u.seek.whence) {
+			case 0:
+				fs[r.fid].off = r.u.seek.off;
+				break;
+			case 1:
+				fs[r.fid].off += r.u.seek.off;
+				break;
+			case 2:
+				fs[r.fid].off = fs[r.fid].f->d.length + r.u.seek.off;
+				break;
+			}
+			r.u.seek.ret = fs[r.fid].off;
 			break;
 		case MSGSTAT:
 			exits("broken");
@@ -198,15 +216,15 @@ void tarfsserve(int fd, char *file)
 		case MSGWALK: {
 			File *f;
 			print("walk\n");
-			r.u.walk.ret = 0;
+			r.u.walk.ret.type = 0xFF;
+			r.u.walk.ret.path = -ENOENT;
 			for(f = fs[r.fid].f->sub; f; f = f->next) {
 				if(!strcmp(f->d.name, r.u.walk.path)) {
 					fs[r.fid].f = f;
-					goto endcase;
+					r.u.walk.ret = f->d.qid;
+					break;
 				}
 			}
-			r.u.walk.ret = -ENOENT;
-endcase:
 			break;
 		}
 		case MSGOPEN:
@@ -219,6 +237,7 @@ endcase:
 			}
 			break;
 		case MSGPWRITE:
+		case MSGWRITE:
 			r.u.rw.ret = -EACCES;
 			break;
 		case MSGWSTAT:

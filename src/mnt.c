@@ -12,7 +12,7 @@ typedef struct Msg Msg;
 struct Msg {
 	Msg *next;
 	Sem done;
-	enum { MSGDEL, MSGDUP, MSGPREAD, MSGPWRITE, MSGSTAT, MSGWSTAT, MSGWALK, MSGOPEN } fn;
+	enum { MSGDEL, MSGDUP, MSGPREAD, MSGREAD, MSGPWRITE, MSGWRITE, MSGSEEK, MSGSTAT, MSGWSTAT, MSGWALK, MSGOPEN } fn;
 	int fid;
 	union {
 		struct {
@@ -21,6 +21,10 @@ struct Msg {
 			size_t len;
 			off_t off;
 		} rw;
+		struct {
+			off_t off;
+			int whence;
+		} seek;
 		struct {
 			PgList *pl;
 			void *buf;
@@ -37,6 +41,8 @@ struct Msg {
 	union {
 		int iret;
 		ssize_t sret;
+		off_t oret;
+		Qid qret;
 	} r;
 };
 
@@ -76,12 +82,12 @@ Conn *mntnew(Conn **master)
 	seminit(&s->ready, 0);
 	seminit(&s->hasmsg, 0);
 	s->msgs = 0;
-	*master = s;
+	*master = (Conn *) s;
 	qid.type = 0x80;
 	conninit((Conn *)root, "", qid, &cops, s);
 	root->s = s;
 	ref(s); /* TODO every client has a reference; might not be a good idea */
-	return root;
+	return (Conn *) root;
 }
 
 static void sdel(Conn *c)
@@ -95,10 +101,10 @@ static Conn *sdup(Conn *c, const char *path)
 	return c;
 }
 
-static ssize_t spread(Conn *c, void *buf_, size_t len, off_t off)
+static ssize_t sread(Conn *c, void *buf_, size_t len)
 {
 	/* TODO handle partial messages */
-	Server *s = c;
+	Server *s = (Server *) c;
 	uint8_t *buf = buf_;
 	condsignal(&s->ready);
 	condwait(&s->hasmsg);
@@ -132,7 +138,13 @@ static ssize_t spread(Conn *c, void *buf_, size_t len, off_t off)
 		}
 		return s->read;
 	case MSGPREAD:
-	case MSGPWRITE:
+	case MSGPWRITE: {
+		int p = 1;
+		if(0) {
+	case MSGREAD:
+	case MSGWRITE:
+			p = 0;
+		}
 		s->msg->u.rw.buf = putusrptr(s->msg->u.rw.pl);
 		if(s->read == 5 && len >= 4) { 
 			PBIT32(buf, s->msg->u.rw.len);
@@ -144,16 +156,35 @@ static ssize_t spread(Conn *c, void *buf_, size_t len, off_t off)
 			buf += PTRLEN / 8, len -= PTRLEN / 8;
 			s->read += PTRLEN / 8;
 		}
-		if(s->read == 9 + PTRLEN / 8 && len >= 8) {
+		if(p && s->read == 9 + PTRLEN / 8 && len >= 8) {
 			PBIT64(buf, s->msg->u.rw.off);
 			buf += 8, len -= 8;
 			s->read += 8;
 		}
-		if(s->read == 17 + PTRLEN / 8) {
+		if(s->read == (p ? 17 : 9) + PTRLEN / 8) {
 			s->read = 0;
 			s->msg->next = s->msgs;
 			s->msgs = s->msg;
-			return 17 + PTRLEN / 8;
+			return (p ? 17 : 9) + PTRLEN / 8;
+		}
+		return s->read;
+	}
+	case MSGSEEK:
+		if(s->read == 5 && len >= 8) {
+			PBIT64(buf, s->msg->u.seek.off);
+			buf += 8, len -= 8;
+			s->read += 8;
+		}
+		if(s->read == 13 && len >= 1) {
+			*buf = s->msg->u.seek.whence;
+			buf++, len--;
+			s->read++;
+		}
+		if(s->read == 14) {
+			s->read = 0;
+			s->msg->next = s->msgs;
+			s->msgs = s->msg;
+			return 14;
 		}
 		return s->read;
 	case MSGSTAT:
@@ -226,11 +257,16 @@ static ssize_t spread(Conn *c, void *buf_, size_t len, off_t off)
 	default:
 		return -1;
 	}
-	(void) off;
 }
-static ssize_t spwrite(Conn *c, const void *buf_, size_t len, off_t off)
+static ssize_t spread(Conn *c, void *buf, size_t len, off_t off)
 {
-	Server *s = c;
+	(void) off;
+	return sread(c, buf, len);
+}
+
+static ssize_t swrite(Conn *c, const void *buf_, size_t len)
+{
+	Server *s = (Server *) c;
 	Msg **msg, *m;
 	const uint8_t *buf = buf_;
 	int fid;
@@ -254,9 +290,17 @@ static ssize_t spwrite(Conn *c, const void *buf_, size_t len, off_t off)
 		break;
 	case MSGPREAD:
 	case MSGPWRITE:
+	case MSGREAD:
+	case MSGWRITE:
 		if(len != 8)
 			return 0;
+		freeusrptr(m->u.rw.pl, m->u.rw.buf);
 		m->r.sret = GBIT32(buf + 4);
+		break;
+	case MSGSEEK:
+		if(len != 12)
+			return 0;
+		m->r.oret = GBIT64(buf + 4);
 		break;
 	case MSGSTAT:
 	case MSGWSTAT:
@@ -265,9 +309,11 @@ static ssize_t spwrite(Conn *c, const void *buf_, size_t len, off_t off)
 		m->r.sret = GBIT32(buf + 4);
 		break;
 	case MSGWALK:
-		if(len != 8)
+		if(len != 17)
 			return 0;
-		m->r.iret = GBIT32(buf + 4);
+		m->r.qret.type = GBIT8(buf + 4);
+		m->r.qret.path = GBIT64(buf + 5);
+		m->r.qret.vers = GBIT32(buf + 13);
 		break;
 	case MSGOPEN:
 		if(len != 8)
@@ -279,7 +325,17 @@ static ssize_t spwrite(Conn *c, const void *buf_, size_t len, off_t off)
 	}
 	condsignal(&m->done);
 	return len;
+}
+static ssize_t spwrite(Conn *c, const void *buf, size_t len, off_t off)
+{
 	(void) off;
+	return swrite(c, buf, len);
+}
+
+static off_t sseek(Conn *c, off_t off, int whence)
+{
+	(void) c, (void) off, (void) whence;
+	return -ESPIPE;
 }
 
 static ssize_t sstat(Conn *c, void *buf, size_t len)
@@ -311,7 +367,10 @@ static Dev sops = {
 	sdel,
 	sdup,
 	spread,
+	sread,
 	spwrite,
+	swrite,
+	sseek,
 	sstat,
 	swstat,
 	swalk,
@@ -320,7 +379,7 @@ static Dev sops = {
 
 static void cdel(Conn *c_)
 {
-	Client *c = c_;
+	Client *c = (Client *) c_;
 	c->msg.fn = MSGDEL;
 	sendmsg(c->s, &c->msg);
 	unref(c->s);
@@ -328,7 +387,7 @@ static void cdel(Conn *c_)
 }
 static Conn *cdup(Conn *c_, const char *path)
 {
-	Client *c = c_;
+	Client *c = (Client *) c_;
 	Client *newc = calloc(1, sizeof(*newc));
 	conninit((Conn *)newc, path, c->c.qid, &cops, c->s);
 	newc->s = c->s;
@@ -338,12 +397,12 @@ static Conn *cdup(Conn *c_, const char *path)
 	sendmsg(c->s, &c->msg);
 	newc->fid = c->msg.r.iret;
 	/* TODO handle errors */
-	return newc;
+	return (Conn *) newc;
 }
 
 static ssize_t cpread(Conn *c_, void *buf, size_t len, off_t off)
 {
-	Client *c = c_;
+	Client *c = (Client *) c_;
 	seminit(&c->msg.done, 0);
 	c->msg.fn = MSGPREAD;
 	c->msg.fid = c->fid;
@@ -353,9 +412,21 @@ static ssize_t cpread(Conn *c_, void *buf, size_t len, off_t off)
 	sendmsg(c->s, &c->msg);
 	return c->msg.r.sret;
 }
+static ssize_t cread(Conn *c_, void *buf, size_t len)
+{
+	Client *c = (Client *) c_;
+	seminit(&c->msg.done, 0);
+	c->msg.fn = MSGREAD;
+	c->msg.fid = c->fid;
+	c->msg.u.rw.pl = getusrptr(buf, len);
+	c->msg.u.rw.off = 0;
+	c->msg.u.rw.len = len;
+	sendmsg(c->s, &c->msg);
+	return c->msg.r.sret;
+}
 static ssize_t cpwrite(Conn *c_, const void *buf, size_t len, off_t off)
 {
-	Client *c = c_;
+	Client *c = (Client *) c_;
 	seminit(&c->msg.done, 0);
 	c->msg.fn = MSGPWRITE;
 	c->msg.fid = c->fid;
@@ -365,10 +436,34 @@ static ssize_t cpwrite(Conn *c_, const void *buf, size_t len, off_t off)
 	sendmsg(c->s, &c->msg);
 	return c->msg.r.sret;
 }
+static ssize_t cwrite(Conn *c_, const void *buf, size_t len)
+{
+	Client *c = (Client *) c_;
+	seminit(&c->msg.done, 0);
+	c->msg.fn = MSGWRITE;
+	c->msg.fid = c->fid;
+	c->msg.u.rw.pl = getusrptr(buf, len);
+	c->msg.u.rw.off = 0;
+	c->msg.u.rw.len = len;
+	sendmsg(c->s, &c->msg);
+	return c->msg.r.sret;
+}
+
+static off_t cseek(Conn *c_, off_t off, int whence)
+{
+	Client *c = (Client *) c_;
+	seminit(&c->msg.done, 0);
+	c->msg.fn = MSGSEEK;
+	c->msg.fid = c->fid;
+	c->msg.u.seek.off = off;
+	c->msg.u.seek.whence = whence;
+	sendmsg(c->s, &c->msg);
+	return c->msg.r.oret;
+}
 
 static ssize_t cstat(Conn *c_, void *buf, size_t len)
 {
-	Client *c = c_;
+	Client *c = (Client *) c_;
 	seminit(&c->msg.done, 0);
 	c->msg.fn = MSGSTAT;
 	c->msg.fid = c->fid;
@@ -379,7 +474,7 @@ static ssize_t cstat(Conn *c_, void *buf, size_t len)
 }
 static ssize_t cwstat(Conn *c_, const void *buf, size_t len)
 {
-	Client *c = c_;
+	Client *c = (Client *) c_;
 	seminit(&c->msg.done, 0);
 	c->msg.fn = MSGWSTAT;
 	c->msg.fid = c->fid;
@@ -391,7 +486,7 @@ static ssize_t cwstat(Conn *c_, const void *buf, size_t len)
 
 static int cwalk(Conn *c_, const char *path)
 {
-	Client *c = c_;
+	Client *c = (Client *) c_;
 	const char *pw;
 	seminit(&c->msg.done, 0);
 	c->msg.fn = MSGWALK;
@@ -402,11 +497,12 @@ static int cwalk(Conn *c_, const char *path)
 	c->msg.u.walk.path[pw - path] = '\0';
 	sendmsg(c->s, &c->msg);
 	free(c->msg.u.walk.path);
-	return c->msg.r.iret;
+	c_->qid = c->msg.r.qret;
+	return c_->qid.type == 0xFF ? (int) c_->qid.path : 0;
 }
 static int copen(Conn *c_, int fl, int mode)
 {
-	Client *c = c_;
+	Client *c = (Client *) c_;
 	seminit(&c->msg.done, 0);
 	c->msg.fn = MSGOPEN;
 	c->msg.fid = c->fid;
@@ -420,7 +516,10 @@ static Dev cops = {
 	cdel,
 	cdup,
 	cpread,
+	cread,
 	cpwrite,
+	cwrite,
+	cseek,
 	cstat,
 	cwstat,
 	cwalk,

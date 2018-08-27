@@ -9,7 +9,7 @@
 
 static void mfree(const RefCounted *rc)
 {
-	MountTab *mt = rc;
+	MountTab *mt = (MountTab *) rc;
 	Mount *m, *n;
 	for(m = mt->first; m;) {
 		if(m->from)
@@ -121,6 +121,7 @@ Conn *vfsgetfid(const char *name, int nolastwalk)
 			if(m)
 				unref(m);
 			m = prevm;
+			prevm = 0;
 			continue; /* might be a union mount; retry */
 		} else {
 			if(prevm)
@@ -204,7 +205,7 @@ int vfsmount(const char *name, Conn *newc, enum mountflags fl)
 int vfschdir(const char *name)
 {
 	/* FIXME */
-	curproc->cwd = name;
+	curproc->cwd = (char *) name;
 	return 0;
 }
 

@@ -56,7 +56,6 @@ idle: ; wait till next interrupt
 .end:
 _sysenter:
 	; called on sysenter; set up stuff and call _syscall
-	pushfd
 	cld
 	sti
 	push edi
@@ -86,8 +85,7 @@ _sysenter:
 	pop gs
 	pop esi
 	pop edi
-	or dword [esp], 1 << 9 ; enable EFLAGS.IF
-	popfd
+	sti
 	sysexit
 .end:
 

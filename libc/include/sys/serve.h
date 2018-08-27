@@ -2,9 +2,10 @@
 #define _SERVE_H
 
 #include <sys/types.h>
+#include <yax/stat.h>
 
 typedef struct {
-	enum { MSGDEL, MSGDUP, MSGPREAD, MSGPWRITE, MSGSTAT, MSGWSTAT, MSGWALK, MSGOPEN } fn;
+	enum { MSGDEL, MSGDUP, MSGPREAD, MSGREAD, MSGPWRITE, MSGWRITE, MSGSEEK, MSGSTAT, MSGWSTAT, MSGWALK, MSGOPEN } fn;
 	int fid;
 	union {
 		struct {
@@ -17,13 +18,18 @@ typedef struct {
 			ssize_t ret;
 		} rw;
 		struct {
+			off_t off;
+			int whence;
+			off_t ret;
+		} seek;
+		struct {
 			void *buf;
 			size_t len;
 			ssize_t ret;
 		} stat;
 		struct {
 			char *path;
-			int ret;
+			Qid ret;
 		} walk;
 		struct {
 			int fl;

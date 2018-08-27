@@ -1,3 +1,4 @@
+#define _YAX_
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -19,13 +20,13 @@ static char map[] = {
 int main(int argc, char **argv)
 {
 	int fd, mnt;
-	off_t delta = 0;
+	off_t off = 0;
 	int a;
 	char *vga = mmap(0, 80 * 25 * 2, PROT_READ | PROT_WRITE, MAP_PHYS, 0, 0xB8000);
 	int irq1 = open("/irq/1", OREAD);
 
 	fd = mkmnt(&mnt);
-	__mountfd("/", fd, MAFTER);
+	__mountfd("/dev", fd, MAFTER);
 	close(fd);
 
 	__iopl();
@@ -52,31 +53,48 @@ int main(int argc, char **argv)
 			else
 				r.u.open.ret = 0;
 			break;
+		case MSGWRITE:
+			r.u.rw.off = off;
 		case MSGPWRITE: {
 			int b;
-			a = r.u.rw.off + delta;
+			a = r.u.rw.off;
 			for(b = 0; b < r.u.rw.len; b++) {
-				char c = ((char *)r.u.rw.buf)[b];
+				char c = ((char *) r.u.rw.buf)[b];
 				if(c == '\n') {
-					/* TODO */
+					int endl = a + 80 - a % 80;
+					for(; a < 80 * 25 && a < endl; a++) {
+						vga[a*2] = ' ';
+						vga[a*2+1] = 0x07;
+					}
 				} else if(c == '\b') {
 					a = (a - 1) < 0 ? 0 : a - 1;
-					delta -= 2;
 					vga[a*2] = ' ';
 					vga[a*2+1] = 0x07;
-					a = (a - 1) < 0 ? 0 : a - 1;
 				} else {
-					vga[a*2] = ((char *)r.u.rw.buf)[b];
+					vga[a*2] = ((char *) r.u.rw.buf)[b];
 					vga[a*2+1] = 0x07;
 					a++;
 				}
+				if(a == 80 * 25) {
+					memmove(vga, vga + 2 * 80, 2 * 80 * 24);
+					for(a = 80 * 24; a < 80 * 25; a++) {
+						vga[a*2] = ' ';
+						vga[a*2+1] = 0x07;
+					}
+					a = 80 * 24;
+				}
 			}
-			outb(0x03d4, 0x0F);
-			outb(0x03d5, (uint8_t) (((int) (r.u.rw.off + delta + r.u.rw.len) % (80 * 25)) & 0xFF));
-			outb(0x03d4, 0x0E);
-			outb(0x03d5, (uint8_t) (((int) (r.u.rw.off + delta + r.u.rw.len) % (80 * 25)) >> 8));
+			r.u.rw.ret = b;
+			if(r.fn == MSGWRITE) {
+				off = a;
+				outb(0x03d4, 0x0F);
+				outb(0x03d5, (uint8_t) ((a % (80 * 25)) & 0xFF));
+				outb(0x03d4, 0x0E);
+				outb(0x03d5, (uint8_t) ((a % (80 * 25)) >> 8));
+			}
 			break;
 		}
+		case MSGREAD:
 		case MSGPREAD: {
 			int i, j = 0, err;
 			while(!j) {
@@ -94,11 +112,31 @@ int main(int argc, char **argv)
 			r.u.rw.ret = j;
 outloop:		break;
 		}
+		case MSGSEEK:
+			switch(r.u.seek.whence) {
+			case 0:
+				off = r.u.seek.off;
+				break;
+			case 1:
+				off += r.u.seek.off;
+				break;
+			case 2:
+				off = 80 * 25 + r.u.seek.off;
+				break;
+			}
+			off %= 80 * 25;
+			r.u.seek.ret = off;
+			break;
 		case MSGWALK:
-			if(strcmp(r.u.walk.path, "cons") != 0)
-				r.u.walk.ret = -ENOENT;
-			else
-				r.u.walk.ret = 0;
+			if(strcmp(r.u.walk.path, "cons") != 0) {
+				r.u.walk.ret.type = 0xFF;
+				r.u.walk.ret.path = -ENOENT;
+				r.u.walk.ret.vers = 0;
+			} else {
+				r.u.walk.ret.type = 0x40;
+				r.u.walk.ret.path = 1;
+				r.u.walk.ret.vers = 0;
+			}
 			break;
 		default:
 			exits("unknown");

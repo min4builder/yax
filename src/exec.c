@@ -5,6 +5,7 @@
 #include "arch.h"
 #include "boot.h"
 #include "libk.h"
+#include "multitask.h"
 #include "pgdir.h"
 #include "printk.h"
 #include "virtmman.h"
@@ -65,7 +66,7 @@ static uint32_t elfload(uint8_t *buf, void **entryp, char *argv, char *envp)
 				prot |= PROT_READ;
 			if(lsize > size || addr / PGLEN == 0 || (uint8_t *) addr + size > VIRT(0))
 				goto noexec;
-			vpgmap((void *) (PGLEN * (addr / PGLEN)), size, prot | PROT_USER, MAP_ANONYMOUS | MAP_FIXED, 0, 0, 0);
+			vpgmap((void *) addr, size, prot | PROT_USER, MAP_ANONYMOUS | MAP_FIXED, 0, 0, 0);
 			memcpy((void *) addr, buf + GBIT32(&ph[4]), lsize);
 			memset((uint8_t *) addr + lsize, 0, size - lsize);
 			break;
@@ -146,7 +147,7 @@ static uint32_t elfrun(Conn *c, void **entryp, char *argv, char *envp)
 				prot |= PROT_WRITE;
 			if(rprot & 4)
 				prot |= PROT_READ;
-			if(lsize > size || addr / PGLEN == 0 || addr % PGLEN || (uint8_t *) addr + size > VIRT(0))
+			if(lsize > size || addr / PGLEN == 0 || (uint8_t *) addr + size > VIRT(0))
 				goto noexec;
 			vpgmap((void *) addr, size, prot | PROT_USER, MAP_PRIVATE | MAP_FIXED, c, off, lsize);
 			break;
@@ -186,8 +187,16 @@ uint32_t exec(Conn *c, void **entryp, char *argv, char *envp)
 	ssize_t err = connpread(c, buf, 32, 0);
 	if(err < 0)
 		return err;
-	if(elfident(buf, err))
-		return elfrun(c, entryp, argv, envp);
+	if(elfident(buf, err)) {
+		uint32_t ret;
+		printk("{Exec ");
+		iprintk(curproc->pid);
+		printk(" = ");
+		ret = elfrun(c, entryp, argv, envp);
+		uxprintk(ret);
+		cprintk('}');
+		return ret;
+	}
 	return -ENOEXEC;
 }
 

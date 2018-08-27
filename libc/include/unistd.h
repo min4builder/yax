@@ -20,13 +20,19 @@ ssize_t read(int, void *, size_t);
 ssize_t write(int, const void *, size_t);
 int execve(const char *, const char *[], const char *[]);
 
+pid_t fork(void);
+
 void _exit(int);
 void exit(int);
+
+#ifdef _YAX_
+#include <yax/rfflags.h>
 
 pid_t rfork(int);
 int exec(const char *, const char *, const char *);
 void exits(const char *);
 void _exits(const char *);
+#endif /* _YAX_ */
 
 #endif /* _UNISTD_H */
 

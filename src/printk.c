@@ -24,15 +24,15 @@ void cprintk(char c)
 	outb(PORT, c);
 }
 
-static void pcprintk(char c)
+static void pcprintk(unsigned char c)
 {
 	if(c >= ' ' && c < 0x7F || c == '\n' || c == '\t')
 		cprintk(c);
 	else {
 		cprintk('\\');
-		cprintk('0' + (c >> 6));
-		cprintk('0' + ((c >> 3) & 07));
-		cprintk('0' + (c & 07));
+		cprintk('x');
+		cprintk((c & 0xf) < 10 ? '0' + (c & 0xf) : 'A' - 10 + (c & 0xf));
+		cprintk((c >> 4) < 10 ? '0' + (c >> 4) : 'A' - 10 + (c >> 4));
 	}
 }
 
