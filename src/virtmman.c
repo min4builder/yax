@@ -355,37 +355,37 @@ void page_fault(Regs *r, void *addr, uint32_t err)
 	cprintk('\n');
 	dumpregs(r);
 	if(!(err & 0x1)) {
-		printk("-not present");
+		(printk)("-not present");
 		if(!(pe & PGPRESENT))
-			printk(" (the problem)");
+			(printk)(" (the problem)");
 	}
 	if(err & 0x2) {
-		printk("-on write");
+		(printk)("-on write");
 		if(!(pe & PGWRITEABLE))
-			printk(" (read only)");
+			(printk)(" (read only)");
 	}
 	if(!(err & 0x4))
-		printk("-by kernel (esp above not valid)");
+		(printk)("-by kernel (esp above not valid)");
 	else {
-		printk("-by a process");
+		(printk)("-by a process");
 		if(!(pe & PGUSER))
-			printk(" (forbidden)");
+			(printk)(" (forbidden)");
 	}
 	if(err & 0x8)
-		printk("-reserved bit set");
+		(printk)("-reserved bit set");
 	if(err & 0x10)
-		printk("-on execute");
-	printk("-at 0x");
-	uxprintk(r->cs);
-	cprintk(':');
-	uxprintk(r->eip);
+		(printk)("-on execute");
+	(printk)("-at 0x");
+	(uxprintk)(r->cs);
+	(cprintk)(':');
+	(uxprintk)(r->eip);
 	if(addr < (void *) 4096)
-		printk("-null pointer dereference");
-	printk("-PDE 0x");
-	uxprintk((uint32_t) &(*PGDIR)[(unsigned int) addr / PGLEN / 1024]);
-	printk("-PT 0x");
-	uxprintk((uint32_t) &(*PT((unsigned int) addr / PGLEN / 1024))[(unsigned int) addr / PGLEN % 1024]);
-	cprintk('\n');
+		(printk)("-null pointer dereference");
+	(printk)("-PDE 0x");
+	(uxprintk)((uint32_t) &(*PGDIR)[(unsigned int) addr / PGLEN / 1024]);
+	(printk)("-PT 0x");
+	(uxprintk)((uint32_t) &(*PT((unsigned int) addr / PGLEN / 1024))[(unsigned int) addr / PGLEN % 1024]);
+	(cprintk)('\n');
 	halt();
 }
 

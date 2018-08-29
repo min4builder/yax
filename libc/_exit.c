@@ -1,3 +1,4 @@
+#define _YAX_
 #include <unistd.h>
 
 void _exit(int n)

@@ -70,6 +70,12 @@ int main(int argc, char **argv)
 					a = (a - 1) < 0 ? 0 : a - 1;
 					vga[a*2] = ' ';
 					vga[a*2+1] = 0x07;
+				} else if(c == '\t') {
+					int endc = a + 8 - a % 8;
+					for(; a < 80 * 25 && a < endc; a++) {
+						vga[a*2] = ' ';
+						vga[a*2+1] = 0x07;
+					}
 				} else {
 					vga[a*2] = ((char *) r.u.rw.buf)[b];
 					vga[a*2+1] = 0x07;

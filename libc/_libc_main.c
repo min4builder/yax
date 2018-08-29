@@ -4,7 +4,8 @@
 static char **tokenize(const char *s)
 {
 	int len = 1;
-	char *bt, *et, *to, **a = 0;
+	const char *bt, *et;
+	char *to, **a = 0;
 	while(*s) {
 		while(*s && (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r'))
 			s++;

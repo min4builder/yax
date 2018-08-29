@@ -1,3 +1,4 @@
+#define _YAX_
 #include <stdint.h>
 #include <unistd.h>
 

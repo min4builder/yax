@@ -2,6 +2,7 @@
 #define _UNISTD_H
 
 #include <stddef.h>
+#include <sys/incantations.h>
 #include <sys/types.h>
 
 #define SEEK_SET 0
@@ -22,16 +23,16 @@ int execve(const char *, const char *[], const char *[]);
 
 pid_t fork(void);
 
-void _exit(int);
-void exit(int);
+void _exit(int) __noreturn;
+void exit(int) __noreturn;
 
 #ifdef _YAX_
 #include <yax/rfflags.h>
 
 pid_t rfork(int);
 int exec(const char *, const char *, const char *);
-void exits(const char *);
-void _exits(const char *);
+void exits(const char *) __noreturn;
+void _exits(const char *) __noreturn;
 #endif /* _YAX_ */
 
 #endif /* _UNISTD_H */

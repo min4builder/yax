@@ -96,11 +96,6 @@ static void setupdir(File *d, char *path, char *file)
 	char *f = file;
 	while(!memcmp(f + 257, "ustar", 5)) {
 		int size = oparse(f + 124, 11);
-		print("Passing through ");
-		print(f + 345);
-		print("/");
-		print(f);
-		print("\n");
 		if(subent(f + 345, f, path)) {
 			File *nf = malloc(sizeof(File));
 			nf->pos = f;
@@ -108,12 +103,8 @@ static void setupdir(File *d, char *path, char *file)
 			nf->sub = 0;
 			nf->next = d->sub;
 			d->sub = nf;
-			print("Found ");
-			print(nf->d.name);
-			print("\n");
 			if(f[156] == '5') {
 				char *np = malloc(strlen(path) + strlen(nf->d.name) + 2);
-				print("Enter directory\n");
 				strcpy(np, path);
 				strcat(np, nf->d.name);
 				strcat(np, "/");
@@ -145,41 +136,20 @@ static ssize_t tpread(Fid *fid, void *buf, size_t len, off_t off)
 	return len;
 }
 
-static void examine(File *f, int ind)
-{
-	int i;
-	for(i = 0; i < ind; i++)
-		print("\t");
-	print(f->d.name);
-	if(f->d.qid.type & 0x80) {
-		File *de = f->sub;
-		print(" {\n");
-		for(de = f->sub; de != 0; de = de->next)
-			examine(de, ind + 1);
-		for(i = 0; i < ind; i++)
-			print("\t");
-		print("}");
-	}
-	print("\n");
-}
-
 void tarfsserve(int fd, char *file)
 {
 	setupdirs(file);
-	examine(root, 0);
 	fs[0].f = root;
 	fs[0].open = 0;
 	for(;;) {
 		Req r = recv(fd);
 		switch(r.fn) {
 		case MSGDEL:
-			print("del\n");
 			fs[r.fid].f = 0;
 			fs[r.fid].open = 0;
 			break;
 		case MSGDUP: {
 			int x;
-			print("dup\n");
 			for(x = 0; x < 256; x++) {
 				if(fs[x].f == 0) {
 					fs[x].f = fs[r.fid].f;
@@ -193,7 +163,6 @@ void tarfsserve(int fd, char *file)
 		case MSGREAD:
 			r.u.rw.off = fs[r.fid].off;
 		case MSGPREAD:
-			print("pread\n");
 			r.u.rw.ret = tpread(&fs[r.fid], r.u.rw.buf, r.u.rw.len, r.u.rw.off);
 			break;
 		case MSGSEEK:
@@ -215,7 +184,6 @@ void tarfsserve(int fd, char *file)
 			break;
 		case MSGWALK: {
 			File *f;
-			print("walk\n");
 			r.u.walk.ret.type = 0xFF;
 			r.u.walk.ret.path = -ENOENT;
 			for(f = fs[r.fid].f->sub; f; f = f->next) {
@@ -228,7 +196,6 @@ void tarfsserve(int fd, char *file)
 			break;
 		}
 		case MSGOPEN:
-			print("open\n");
 			if(r.u.open.fl & (O_EXCL | O_WRONLY)) {
 				r.u.open.ret = -EACCES;
 			} else {
