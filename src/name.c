@@ -2,10 +2,10 @@
 #include <yax/openflags.h>
 #include "fds.h"
 #include "libk.h"
-#include "malloc.h"
+#include "mem/malloc.h"
+#include "mem/ref.h"
 #include "multitask.h"
 #include "name.h"
-#include "ref.h"
 
 static void mfree(const RefCounted *rc)
 {

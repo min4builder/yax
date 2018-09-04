@@ -1,5 +1,5 @@
 #include "lock.h"
-#include "ref.h"
+#include "mem/ref.h"
 
 /* names in parentheses because of the macros of same name (see ref.h) */
 void (mkref)(RefCounted *rc, void (*free)(const RefCounted *))

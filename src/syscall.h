@@ -7,9 +7,6 @@
 #include <yax/mapflags.h>
 #include <yax/nflags.h>
 #include <yax/rfflags.h>
-#include "arch.h"
-#include "libk.h"
-#include "virtmman.h"
 
 #define RFMAX 63
 #define MAP_MAX 31

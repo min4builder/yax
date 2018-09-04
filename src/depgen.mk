@@ -1,7 +1,7 @@
 depend: depend.mk
 
-depend.mk: *.[ch]
-	for i in *.c; do \
+depend.mk: *.[ch] */*.[ch]
+	for i in *.c */*.c; do \
 		echo -n "$$i: "; \
 		awk '/^#[ \t]*include[ \t]+".*"[ \t]*$$/ { sub(/^#[ \t]*include[ \t]+"/, ""); sub(/"[ \t]*$$/, ""); printf "%s ", $$0; }' "$$i"; \
 		echo; \

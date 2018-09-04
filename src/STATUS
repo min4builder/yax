@@ -34,15 +34,21 @@ On interrupt:
 
 The kernel is roughly divided into 4 parts:
  - Mem
-   - physmman, ppg
-     - major memory waste (rewrite scheduled)
+   - phys (ppg)
+     - ppgalloc, ppgfree
    - pgdir
-     - should use invlpg instead of always reloading cr3
-   - virtmman, vpg (depends on physmman and pgdir)
-     - mmap, munmap
-       - should be optimized (rewrite scheduled)
+     - pdinval, ptinval
+     - switchpgdir
+       - should use invlpg instead of always reloading cr3
+     - pgmap, pgunmap
+   - usrboundary
      - verusrbuf, verusrstr
      - usrmemget, usrmemmap
+   - virt (vpg) (depends on phys and pgdir)
+     - vpgkmap, vpgunmap
+     - vpgumap, vpgpmap, vpgfmap
+       - missing MAP_SHARED support for file mappings
+   - malloc (libmalloc; depends on vpgkmap and vpgunmap)
  - Task
    - sysentry
      - usermode
@@ -69,19 +75,18 @@ The kernel is roughly divided into 4 parts:
      - connread, connwrite, connseek
      - connpread, connpwrite
      - connstat, connwstat
-   - irqfs (Conn implementation)
-     - irqfsnew
+   - iofs (Conn implementation)
+     - iofsnew
    - mnt (Conn implementation)
      - mntnew
    - printkfs (Conn implementation)
      - printkfsnew
      - seems to be working, probably has race conditions
    - pipe (Conn implementation)
-     - Pipe *
      - pipenew
      - seems to be working, probably has race conditions
  - Misc
-   - exec (depends on mem)
+   - exec (depends on mem, VFS)
      - exec
        - ELF format
        - calls the entry point with a stack set up, SYSV calling convention:
@@ -89,7 +94,6 @@ The kernel is roughly divided into 4 parts:
          - the return address doesn't point to anything interesting
          - argv and envp are single strings; the libc should split them
            according to some convention
-   - malloc (dlmalloc, almost 50% of the code; depends on mem)
    - libk
    - ssp
    - int
@@ -103,10 +107,8 @@ TODO (in rough order of priority) (also grep TODO *.[ch])
  - get more programs working
  - implement /proc
  - implement note pending
- - fix physmman's memory waste
  - fix concurrency issues
- - make virtmman faster
-   - use invlpg
+ - use invlpg
  - implement SMP
  - make it fit in a floppy
 

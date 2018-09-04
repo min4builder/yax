@@ -7,8 +7,8 @@
 #include "arch.h"
 #include "fds.h"
 #include "lock.h"
+#include "mem/pgdir.h"
 #include "name.h"
-#include "virtmman.h"
 
 typedef struct Proc Proc;
 

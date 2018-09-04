@@ -3,7 +3,7 @@
 #include "conn.h"
 #include "libk.h"
 #include "lock.h"
-#include "malloc.h"
+#include "mem/malloc.h"
 #include "multitask.h"
 #include "pipe.h"
 #include "stat.h"

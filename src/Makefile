@@ -1,14 +1,15 @@
 include ../config.mk
 LD=i686-yax-ld
-CFLAGS+=-std=c89 -ffreestanding -Werror
+CFLAGS+=-std=c89 -ffreestanding -Wall -Wextra -Werror -Wno-error=parentheses -I$(PWD)
 LDFLAGS=-T linker.ld -nostdlib
 LIBS=
 
 # boot.o must be first
-OBJS = boot.o conn.o exec.o fds.o int.o iofs.o libk.o lock.o main.o malloc.o \
-	mnt.o multitask.o multitasks.o name.o pgdir.o physmman.o pic.o pipe.o \
-	pit.o port.o printk.o printkfs.o ref.o ssp.o stat.o syscall.o \
-	sysentry.o virtmman.o
+OBJS = boot.o conn.o exec.o fds.o int.o iofs.o libk.o lock.o main.o \
+	mem/malloc.o mem/pgdir.o mem/pgdirs.o mem/phys.o mem/ref.o mem/user.o \
+	mem/usrboundary.o mem/virt.o mnt.o multitask.o multitasks.o name.o \
+	pic.o pipe.o pit.o port.o printk.o printkfs.o ssp.o stat.o syscall.o \
+	sysentry.o
 
 all: yax.bin
 
@@ -16,7 +17,7 @@ headers:
 	mkdir -p $(INCLUDEINSTALL)/yax; cp -R include/* $(INCLUDEINSTALL)/yax/
 
 clean:
-	-$(RM) -f *.o depend.mk yax.bin yax.img yax.sym
+	-$(RM) -f *.o */*.o depend.mk yax.bin yax.img yax.sym
 
 yax.img: yax.bin
 	mkfs.msdos -C $@ 1440

@@ -14,11 +14,11 @@
 #include "pic.h"
 #include "pipe.h"
 #include "pit.h"
-#include "physmman.h"
+#include "mem/phys.h"
 #include "printk.h"
 #include "syscall.h"
 #include "sysentry.h"
-#include "virtmman.h"
+#include "mem/virt.h"
 
 void dumpregs(Regs *);
 
@@ -97,7 +97,7 @@ void kernel_main(MultibootInfo *mbinfo)
 	 * here until we change to user mode */
 	/* no need for these anymore */
 	for(i = (uintptr_t) mod.start; i <= (uintptr_t) mod.end; i += PGLEN)
-		ppgunref(i);
+		ppgfree(i);
 	vfsmount("/", iofsnew(), 0); /* TODO check for errors and stuff */
 	usermode(code, (void *) err);
 }

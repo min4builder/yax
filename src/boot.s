@@ -6,6 +6,7 @@ global kernel_stack_bottom
 global kernel_stack_low
 global kernel_pd
 global kernel_spte
+global _kernel_spg
 global _kernel_pt1
 global _kernel_pt2
 global _kernel_lastpt
@@ -15,6 +16,8 @@ extern _init
 extern kernel_main
 extern _sysenter
 extern idt_desc
+extern _kernel_spg_lonibble
+extern _kernel_spg_hiword
 extern _kernel_pt1_lonibble
 extern _kernel_pt1_hiword
 extern _kernel_pt2_lonibble
@@ -158,6 +161,8 @@ gdt:
 
 section .data
 align 4096
+_kernel_spg:
+	times 1024 dd 0
 _kernel_pt1:
 %assign i 0
 %rep 1024
@@ -183,7 +188,10 @@ kernel_pd:
 	db 0x03
 	db _kernel_pt2_lonibble
 	dw _kernel_pt2_hiword
-	times (1024 - (VIRT(0) >> 22) - 3) dd 0
+	times (1024 - (VIRT(0) >> 22) - 4) dd 0
+	db 0x03
+	db _kernel_spg_lonibble
+	dw _kernel_spg_hiword
 	db 0x03
 	db _kernel_pd_lonibble
 	dw _kernel_pd_hiword

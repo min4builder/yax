@@ -8,8 +8,9 @@
 #include "libk.h"
 #include "lock.h"
 #include "macro.h"
-#include "malloc.h"
-#include "pgdir.h"
+#include "mem/malloc.h"
+#include "mem/pgdir.h"
+#include "mem/usrboundary.h"
 #include "printk.h"
 #include "multitask.h"
 
@@ -213,7 +214,7 @@ pid_t procrforkgut(void *sp, enum rfflags fl)
 	new->pd = vpgcopy(fl & RFMEM);
 	new->quantum = 0;
 	new->priority = curproc->priority;
-	new->kstack = vpgmap(0, 0x10000, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, 0, 0, 0);
+	new->kstack = vpgkmap(0x10000, PROT_READ | PROT_WRITE);
 	new->syscallstack = (uint8_t *) new->kstack + 0x10000;
 	new->cwd = curproc->cwd; /* XXX FIXME XXX */
 	if(fl & RFNAMEG)
@@ -315,7 +316,7 @@ void proclightnew(void (*f)(void *), void *arg)
 	new->fds = 0;
 	new->quantum = 0;
 	new->priority = nullproc->priority;
-	new->kstack = vpgmap(0, 0x1000, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, 0, 0, 0);
+	new->kstack = vpgkmap(0x1000, PROT_READ | PROT_WRITE);
 	new->sp = (uint8_t *) new->kstack + 0x1000;
 	STACKPUSH(new->sp, &arg, sizeof(void *));
 	STACKPUSH(new->sp, 0, sizeof(void *)); /* return addr */
@@ -426,7 +427,7 @@ void *prochandlegut(Regs *r, const char *note)
 	if(!curproc->handler || strcmp(note, "kill") == 0)
 		procexits(note);
 	else {
-		ns = vpgmap(0, sizeof(Regs) + nlen + 0x10000, PROT_READ | PROT_WRITE | PROT_USER, MAP_ANONYMOUS, 0, 0, 0);
+		ns = vpgumap(0, sizeof(Regs) + nlen + 0x10000, PROT_READ | PROT_WRITE, MAP_ANONYMOUS);
 		nsp = (uint8_t *) ns + 0x10000;
 		notead = STACKPUSH(nsp, note, nlen);
 		if(r && r->cs == 0x1b)

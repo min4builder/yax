@@ -6,14 +6,6 @@
 #include <yax/errorcodes.h>
 #include "boot.h"
 
-#define PGCNT ((unsigned int) 1 << 20)
-#define MAXUPG VIRT(0)
-#define PGLEN ((unsigned int) 1 << 12)
-
-#define PGDIR ((PgDir *) 0xfffff000)
-#define PT(x) ((PgDir *) (0xffc00000 + 0x1000 * (x)))
-#define SPG ((void *) 0xffbfd000)
-
 #define TICK 100 /*Hz*/
 
 typedef struct {

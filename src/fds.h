@@ -3,7 +3,7 @@
 
 #include <sys/types.h>
 #include "conn.h"
-#include "ref.h"
+#include "mem/ref.h"
 
 typedef struct {
 	RefCounted refcounted;

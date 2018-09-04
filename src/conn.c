@@ -3,11 +3,11 @@
 #include <yax/openflags.h>
 #include "conn.h"
 #include "libk.h"
-#include "malloc.h"
+#include "mem/malloc.h"
 #include "multitask.h"
 #include "pipe.h"
 #include "printk.h"
-#include "ref.h"
+#include "mem/ref.h"
 
 static void cfree(const RefCounted *rc)
 {

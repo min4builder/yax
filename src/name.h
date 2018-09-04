@@ -4,7 +4,7 @@
 #include <yax/mountflags.h>
 #include <yax/openflags.h>
 #include "conn.h"
-#include "ref.h"
+#include "mem/ref.h"
 
 typedef struct Mount Mount;
 struct Mount {

@@ -3,7 +3,7 @@
 
 #include <sys/types.h>
 #include "lock.h"
-#include "ref.h"
+#include "mem/ref.h"
 #include "stat.h"
 
 typedef struct Conn Conn;

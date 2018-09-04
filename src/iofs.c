@@ -7,7 +7,7 @@
 #include "iofs.h"
 #include "libk.h"
 #include "lock.h"
-#include "malloc.h"
+#include "mem/malloc.h"
 #include "multitask.h"
 #include "pic.h"
 #include "port.h"
@@ -23,7 +23,6 @@ typedef struct {
 } DirConn;
 
 static Sem irqsem[16];
-static Lock irqlock[16];
 
 void iofsinterrupt(int n)
 {

@@ -8,14 +8,16 @@
 #include "conn.h"
 #include "exec.h"
 #include "fds.h"
+#include "libk.h"
+#include "mem/malloc.h"
+#include "mem/usrboundary.h"
+#include "mem/virt.h"
 #include "mnt.h"
-#include "malloc.h"
 #include "multitask.h"
 #include "name.h"
 #include "pipe.h"
 #include "printk.h"
 #include "printkfs.h"
-#include "virtmman.h"
 #include "syscall.h"
 #include "sysentry.h"
 
@@ -166,8 +168,13 @@ void *sys_mmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, u
 			return ERR2PTR(-EINVAL);
 		}
 	}
-	ret = vpgmap(addr, len, prot | PROT_USER, flags, c, off, len);
-	uxprintk(ret);
+	if(flags & MAP_ANONYMOUS)
+		ret = vpgumap(addr, len, prot, flags);
+	else if(flags & MAP_PHYS)
+		ret = vpgpmap(addr, len, prot, flags, off);
+	else
+		ret = vpgfmap(addr, len, prot, flags, c, off);
+	uxprintk((uintptr_t) ret);
 	printk(";\n");
 	return ret;
 }

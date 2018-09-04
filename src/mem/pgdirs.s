@@ -27,16 +27,17 @@ switchpgdir:
 %if 0
 pginval:
 	mov eax, [esp+4]
-	shl eax, 12
 	invlpg [eax]
 	jmp pdinval
 .end:
 ptinval:
 	mov eax, [esp+4]
-	shl eax, 22
 	mov ecx, 1024
 .loop:	invlpg [eax]
-	call pdinval
+	mov edx, eax
+	shr edx, 2
+	add edx, 0xFFC00000
+	invlpg [edx]
 	add eax, 1 << 12
 	loop .loop
 	ret

@@ -5,10 +5,10 @@
 #include "arch.h"
 #include "boot.h"
 #include "libk.h"
+#include "mem/pgdir.h"
+#include "mem/virt.h"
 #include "multitask.h"
-#include "pgdir.h"
 #include "printk.h"
-#include "virtmman.h"
 #include "exec.h"
 
 static int elfident(uint8_t *buf, size_t len)
@@ -66,7 +66,7 @@ static uint32_t elfload(uint8_t *buf, void **entryp, char *argv, char *envp)
 				prot |= PROT_READ;
 			if(lsize > size || addr / PGLEN == 0 || (uint8_t *) addr + size > VIRT(0))
 				goto noexec;
-			vpgmap((void *) addr, size, prot | PROT_USER, MAP_ANONYMOUS | MAP_FIXED, 0, 0, 0);
+			vpgumap((void *) addr, size, prot, MAP_ANONYMOUS | MAP_FIXED);
 			memcpy((void *) addr, buf + GBIT32(&ph[4]), lsize);
 			memset((uint8_t *) addr + lsize, 0, size - lsize);
 			break;
@@ -81,7 +81,7 @@ static uint32_t elfload(uint8_t *buf, void **entryp, char *argv, char *envp)
 	}
 	arlen = strlen(argv) + 1;
 	envlen = strlen(envp) + 1;
-	stack = vpgmap(VIRT(0) - PGLEN, PGLEN, PROT_READ | PROT_WRITE | PROT_USER, MAP_ANONYMOUS | MAP_FIXED | MAP_NOSHARE, 0, 0, 0);
+	stack = vpgumap(VIRT(0) - PGLEN, PGLEN, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_FIXED | MAP_NOSHARE);
 	sp = stack + PGLEN;
 	envpp = STACKPUSH(sp, envp, envlen);
 	argvp = STACKPUSH(sp, argv, arlen);
@@ -149,7 +149,9 @@ static uint32_t elfrun(Conn *c, void **entryp, char *argv, char *envp)
 				prot |= PROT_READ;
 			if(lsize > size || addr / PGLEN == 0 || (uint8_t *) addr + size > VIRT(0))
 				goto noexec;
-			vpgmap((void *) addr, size, prot | PROT_USER, MAP_PRIVATE | MAP_FIXED, c, off, lsize);
+			vpgfmap((void *) addr, lsize, prot, MAP_PRIVATE | MAP_FIXED, c, off);
+			if((int32_t) (size - (lsize + PGLEN - (addr + lsize) % PGLEN)) > 0)
+				vpgumap((void *) addr + lsize + PGLEN - (addr + lsize) % PGLEN, size - (lsize + PGLEN - (addr + lsize) % PGLEN), prot, MAP_ANONYMOUS | MAP_FIXED);
 			break;
 		}
 		case 0:
@@ -162,7 +164,7 @@ static uint32_t elfrun(Conn *c, void **entryp, char *argv, char *envp)
 	}
 	arlen = strlen(argv) + 1;
 	envlen = strlen(envp) + 1;
-	stack = vpgmap(VIRT(0) - PGLEN, PGLEN, PROT_READ | PROT_WRITE | PROT_USER, MAP_ANONYMOUS | MAP_FIXED | MAP_NOSHARE, 0, 0, 0);
+	stack = vpgumap(VIRT(0) - PGLEN, PGLEN, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_FIXED | MAP_NOSHARE);
 	sp = stack + PGLEN;
 	envpp = STACKPUSH(sp, envp, envlen);
 	argvp = STACKPUSH(sp, argv, arlen);
@@ -183,7 +185,7 @@ noexec:
 
 uint32_t exec(Conn *c, void **entryp, char *argv, char *envp)
 {
-	char buf[32];
+	uint8_t buf[32];
 	ssize_t err = connpread(c, buf, 32, 0);
 	if(err < 0)
 		return err;

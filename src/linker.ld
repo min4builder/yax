@@ -5,6 +5,8 @@ SECTIONS
 	. = VIRT + 0x100000;
 	KERNEL_LOAD = . - VIRT;
 	_int_start_high = ADDR(int_handler) >> 16;
+	_kernel_spg_lonibble = ((_kernel_spg - VIRT) >> 8) & 0xf0;
+	_kernel_spg_hiword = ((_kernel_spg - VIRT) >> 16) & 0xffff;
 	_kernel_pt1_lonibble = ((_kernel_pt1 - VIRT) >> 8) & 0xf0;
 	_kernel_pt1_hiword = ((_kernel_pt1 - VIRT) >> 16) & 0xffff;
 	_kernel_pt2_lonibble = ((_kernel_pt2 - VIRT) >> 8) & 0xf0;

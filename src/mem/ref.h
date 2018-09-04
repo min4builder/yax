@@ -1,5 +1,5 @@
-#ifndef _REF_H
-#define _REF_H
+#ifndef _MEM_REF_H
+#define _MEM_REF_H
 
 #include "lock.h"
 
@@ -19,5 +19,5 @@ void unref(const RefCounted *);
 #define ref(x) ref((const RefCounted *) (x))
 #define unref(x) unref((const RefCounted *) (x))
 
-#endif /* _REF_H */
+#endif /* _MEM_REF_H */
 

@@ -2,11 +2,11 @@
 #include <yax/openflags.h>
 #include "conn.h"
 #include "libk.h"
-#include "malloc.h"
+#include "mem/malloc.h"
+#include "mem/usrboundary.h"
 #include "mnt.h"
 #include "multitask.h"
 #include "stat.h"
-#include "virtmman.h"
 
 typedef struct Msg Msg;
 struct Msg {

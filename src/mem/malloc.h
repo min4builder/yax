@@ -2,7 +2,7 @@
 #define _LIBALLOC_H
 
 #include "lock.h"
-#include "virtmman.h"
+#include "mem/virt.h"
 
 /** \defgroup ALLOCHOOKS liballoc hooks 
  *
@@ -46,7 +46,7 @@ extern Lock liballoc_lock;
  * \return NULL if the pages were not allocated.
  * \return A pointer to the allocated memory.
  */
-#define liballoc_alloc(n) vpgmap(0, (n) * l_pageSize, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, 0, 0, 0)
+#define liballoc_alloc(n) vpgkmap((n) * l_pageSize, PROT_READ | PROT_WRITE)
 
 /** This frees previously allocated memory. The void* parameter passed
  * to the function is the exact same value returned from a previous

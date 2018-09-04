@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <yax/openflags.h>
 #include "conn.h"
-#include "malloc.h"
+#include "mem/malloc.h"
 #include "printk.h"
 #include "printkfs.h"
 #include "stat.h"
