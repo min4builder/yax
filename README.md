@@ -14,9 +14,33 @@ too many bugs and missing features on the kernel (also the code is a mess), but
 it already manages memory, multitasks and has a VFS. See src/STATUS for an
 overview.
 
+## How to compile
+
+    ./configure
+    ./build-binutils.sh
+    ./install-headers.sh
+    ./build-gcc.sh
+
+Then setup your environment with `. ./config.sh`.
+
+    cd libc
+    make
+    cd ..
+    cd drivers
+    make
+    cd ..
+    cd initrd
+    make
+    cd ..
+    cd src
+    make
+
+Then, on `src/`, `make test` for a qemu-based test run.
+
 ## Legal
 All code I wrote is under the (Expat) MIT license (previously public domain).
 Code not written by me:
 
  - liballoc was under the public domain; this version relicensed to MIT
+ - PDCLib is under CC0
 
