@@ -56,6 +56,9 @@ idle: ; wait till next interrupt
 .end:
 _sysenter:
 	; called on sysenter; set up stuff and call _syscall
+	push ecx
+	push ebp
+	mov ebp, esp
 	cld
 	sti
 	push edi
@@ -85,6 +88,8 @@ _sysenter:
 	pop gs
 	pop esi
 	pop edi
+	pop ebp
+	add esp, 4
 	sti
 	sysexit
 .end:

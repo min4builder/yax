@@ -1,8 +1,8 @@
 #define NDEBUG
+#include <string.h>
 #include <sys/types.h>
 #include <yax/openflags.h>
 #include "conn.h"
-#include "libk.h"
 #include "mem/malloc.h"
 #include "multitask.h"
 #include "pipe.h"
@@ -12,6 +12,8 @@
 static void cfree(const RefCounted *rc)
 {
 	Conn *c = (Conn *) rc;
+	printk("{Del}");
+	unref(c->name);
 	c->dev->del(c);
 }
 void conninit(Conn *c, const char *name, Qid qid, Dev *dev, void *inst)
@@ -40,10 +42,17 @@ int connopen(Conn *c, int fl, int mode)
 	cprintk('}');
 	return ret;
 }
-Conn *conndup(Conn *c, const char *name)
+Conn *conndup(Conn *c, Str *name)
 {
+	Conn *d;
 	printk("{Dup}");
-	return c->dev->dup(c, name);
+	d = c->dev->dup(c);
+	if(d) {
+		mkref(d, cfree);
+		d->name = name;
+		ref(name);
+	}
+	return d;
 }
 int connwalk(Conn *c, const char *elem)
 {

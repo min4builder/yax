@@ -1,13 +1,17 @@
 #include <string.h>
-#include <sys/types.h>
 
-size_t strlcpy(char *to, const char *from, size_t tolen)
+size_t strlcpy(char *a, const char *b, size_t n)
 {
-	size_t fromlen = strlen(from);
-	if(tolen != 0) {
-		memcpy(to, from, fromlen + 1 < tolen ? fromlen + 1 : tolen - 1);
-		to[tolen - 1] = '\0';
+	size_t r = 0;
+	while(n - 1 && *b) {
+		*a++ = *b++;
+		n--;
+		r++;
 	}
-	return fromlen;
+	while(*b)
+		r++, b++;
+	if(n == 1)
+		*a++ = '\0';
+	return r;
 }
 

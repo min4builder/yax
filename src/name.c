@@ -1,11 +1,13 @@
+#define NDEBUG
+#include <string.h>
 #include <yax/mountflags.h>
 #include <yax/openflags.h>
 #include "fds.h"
-#include "libk.h"
 #include "mem/malloc.h"
 #include "mem/ref.h"
 #include "multitask.h"
 #include "name.h"
+#include "printk.h"
 
 static void mfree(const RefCounted *rc)
 {
@@ -95,6 +97,7 @@ Conn *vfsgetfid(const char *name, int nolastwalk)
 	Mount *mount = 0;
 	Conn *m = 0, *prevm = 0;
 	char *newname = nameclean(name);
+	Str *sname = strmk(newname);
 	int err;
 	name = newname + 1; /* skip initial / */
 	do {
@@ -105,7 +108,7 @@ Conn *vfsgetfid(const char *name, int nolastwalk)
 				if(prevm)
 					unref(prevm);
 				prevm = m;
-				m = conndup(mount->to, newname);
+				m = conndup(mount->to, sname);
 				mount = mount->next; /* in case of an union */
 				break;
 			}
@@ -136,13 +139,14 @@ Conn *vfsgetfid(const char *name, int nolastwalk)
 	} while(name[0]);
 	if(prevm)
 		unref(prevm);
+	unref(sname);
 	return m;
 bailclose:
 	unref(m);
 bail:
 	if(prevm)
 		unref(prevm);
-	free(newname);
+	unref(sname);
 	return ERR2PTR(err);
 }
 
@@ -150,6 +154,11 @@ Conn *vfsopen(const char *name, enum openflags fl, int mode)
 {
 	Conn *c = vfsgetfid(name, !!(fl & OCREAT));
 	int err;
+	printk("[open ");
+	printk(name);
+	printk(" = ");
+	uxprintk((uintptr_t) c);
+	printk("]\n");
 	if(PTRERR(c))
 		return c;
 	if((err = connopen(c, fl, mode)) < 0) {

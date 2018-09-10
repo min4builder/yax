@@ -1,10 +1,12 @@
 include ../config.mk
 
-OBJS=_libc_main.o _exit.o abort.o environ.o errno.o execve.o exit.o exits.o \
-	fork.o liballoc.o memcpy.o memcmp.o memset.o port.o serve.o strcat.o \
-	strcmp.o strcpy.o strlen.o strlcpy.o strncat.o syscall.o
+LIBK_OBJS=itoa.o memcmp.o memmove.o memset.o port.o strcmp.o strcpy.o \
+	strlcpy.o strlen.o strncmp.o
 
-all: headers $(LIBINSTALL)/libc.a $(LIBINSTALL)/crt0.o $(LIBINSTALL)/crti.o $(LIBINSTALL)/crtn.o
+OBJS:=_libc_main.o _exit.o abort.o assert.o environ.o errno.o execve.o exit.o \
+	exits.o fork.o liballoc.o serve.o syscall.o $(LIBK_OBJS)
+
+all: headers $(LIBINSTALL)/libc.a $(LIBINSTALL)/libk.a $(LIBINSTALL)/crt0.o $(LIBINSTALL)/crti.o $(LIBINSTALL)/crtn.o
 
 headers:
 	cp -r include/* $(INCLUDEINSTALL)/
@@ -21,8 +23,14 @@ $(LIBINSTALL)/crtn.o: crtn.o
 $(LIBINSTALL)/libc.a: libc.a
 	cp libc.a $(LIBINSTALL)/libc.a
 
+$(LIBINSTALL)/libk.a: libk.a
+	cp libk.a $(LIBINSTALL)/libk.a
+
 libc.a: $(OBJS)
 	$(AR) -o $@ $(OBJS)
+
+libk.a: $(LIBK_OBJS)
+	$(AR) -o $@ $(LIBK_OBJS)
 
 clean:
 	rm -f *.o *.a

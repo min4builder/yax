@@ -1,4 +1,4 @@
-#define _YAX_
+#define __YAX__
 #include <sys/types.h>
 #include <unistd.h>
 

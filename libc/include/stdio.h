@@ -1,12 +1,15 @@
-#ifndef _STDIO_H
-#define _STDIO_H
+#include <_yalc.h>
 
-typedef int FILE;
+#ifndef _STDIO_H_ANSI
+#define _STDIO_H_ANSI
 
-extern FILE *stderr;
+#ifndef NULL
+#define NULL _YalcNULL
+#endif
 
-int fflush(FILE *);
-int fprintf(FILE *, const char *, ...);
+_YALCDEFTYPE(FILE);
+_YALCDEFTYPE(fpos_t);
+_YALCDEFTYPE(size_t);
 
-#endif /* _STDIO_H */
+#endif /* _STDIO_H_ANSI */
 

@@ -22,7 +22,7 @@ typedef struct {
 
 #define RFORKREGADJUST(sp, cur, new) (((Regs *) sp)->ebp += (uint8_t *) (new) - (uint8_t *) (cur))
 
-#define STACKPUSH(sp, ptr, len) memcpy(*(char **)&(sp) -= (len), (ptr), (len))
+#define STACKPUSH(sp, ptr, len) memcpy((sp) = (uint8_t *) (sp) - (len), (ptr), (len))
 #define STACKPEEK(sp, ptr, len) ((void)memcpy((ptr), (sp), (len)))
 
 #define PTRERR(p) ((int32_t) (p) > -MAXERR && (int32_t) (p) < 0)

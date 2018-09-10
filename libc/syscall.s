@@ -40,7 +40,7 @@ sys pwrite, 14
 sys read, 15
 sys write, 16
 
-sys seek, 17
+sys lseek, 17
 sys dup2, 18
 ;sys poll, 19
 ;sys chdir, 20

@@ -37,6 +37,7 @@ static char **tokenize(const char *s)
 }
 
 int main(int, char **);
+extern char **environ;
 
 void _libc_main(const char *argv, const char *envp)
 {

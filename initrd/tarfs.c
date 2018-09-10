@@ -1,12 +1,10 @@
-#define _YAX_
+#define __YAX__
+#include <errno.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/serve.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <yax/errorcodes.h>
-#include <yax/openflags.h>
-#include <yax/stat.h>
 
 typedef struct File File;
 struct File {
@@ -35,9 +33,9 @@ static int oparse(char *s, int l)
 	return r;
 }
 
-static char *fname(const char *s)
+static const char *fname(const char *s)
 {
-	char *os = s;
+	const char *os = s;
 	while(*s) {
 		if(*s == '/') {
 			if(!s[1]) {
@@ -76,7 +74,7 @@ static int subent(char *a1, char *a2, char *b)
 	}
 }
 
-static Dir mkdirent(int j, int dir, int perm, char *name, char *uid, char *gid, int size)
+static Dir mkdirent(int j, int dir, int perm, const char *name, const char *uid, const char *gid, int size)
 {
 	Dir d = { { 0, 0, 0 }, 0, 0, 0, 0, "", "", "", "" };
 	d.qid.path = j;
@@ -84,9 +82,14 @@ static Dir mkdirent(int j, int dir, int perm, char *name, char *uid, char *gid, 
 	d.qid.type = dir ? 0x80 : 0;
 	d.mode = (d.qid.type << 24) | perm;
 	d.length = size;
-	d.name = name;
-	d.uid = uid;
-	d.gid = gid;
+	if(name[strlen(name)-1] == '/') {
+		char *newname = malloc(strlen(name));
+		strlcpy(newname, name, strlen(name));
+		name = newname;
+	}
+	d.name = (char *)name;
+	d.uid = (char *)uid;
+	d.gid = (char *)gid;
 	d.muid = d.uid;
 	return d;
 }
@@ -128,7 +131,7 @@ static void setupdirs(char *file)
 
 static ssize_t tpread(Fid *fid, void *buf, size_t len, off_t off)
 {
-	if(!(fid->open & OREAD))
+	if(!(fid->open & O_RDONLY))
 		return -EACCES;
 	if(off + len > fid->f->d.length)
 		len = fid->f->d.length - off < 0 ? 0 : fid->f->d.length - off;
@@ -162,6 +165,7 @@ void tarfsserve(int fd, char *file)
 		}
 		case MSGREAD:
 			r.u.rw.off = fs[r.fid].off;
+			/* FALLTHRU */
 		case MSGPREAD:
 			r.u.rw.ret = tpread(&fs[r.fid], r.u.rw.buf, r.u.rw.len, r.u.rw.off);
 			break;

@@ -8,7 +8,6 @@
 #include "exec.h"
 #include "int.h"
 #include "iofs.h"
-#include "libk.h"
 #include "multitask.h"
 #include "name.h"
 #include "pic.h"

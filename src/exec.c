@@ -1,10 +1,11 @@
+#define NDEBUG
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 #include <yax/bit.h>
 #include <yax/errorcodes.h>
 #include "arch.h"
 #include "boot.h"
-#include "libk.h"
 #include "mem/pgdir.h"
 #include "mem/virt.h"
 #include "multitask.h"

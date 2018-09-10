@@ -1,5 +1,4 @@
-#define _YAX_
-#include <stdint.h>
+#define __YAX__
 #include <unistd.h>
 
 void _fini(void);

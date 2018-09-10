@@ -4,13 +4,14 @@
 #include <sys/types.h>
 #include "lock.h"
 #include "mem/ref.h"
+#include "mem/str.h"
 #include "stat.h"
 
 typedef struct Conn Conn;
 
 typedef struct {
 	void (*del)(Conn *);
-	Conn *(*dup)(Conn *, const char *name);
+	Conn *(*dup)(Conn *);
 	ssize_t (*pread)(Conn *, void *, size_t, off_t);
 	ssize_t (*read)(Conn *, void *, size_t);
 	ssize_t (*pwrite)(Conn *, const void *, size_t, off_t);
@@ -26,14 +27,14 @@ struct Conn {
 	RefCounted refcounted;
 	Dev *dev;
 	void *inst;
-	char *name;
+	Str *name;
 	Qid qid;
 };
 
 void conninit(Conn *, const char *, Qid, Dev *, void *);
 
 int connopen(Conn *, int, int);
-Conn *conndup(Conn *, const char *name);
+Conn *conndup(Conn *, Str *name);
 int connwalk(Conn *, const char *path);
 
 ssize_t connread(Conn *, void *, size_t);

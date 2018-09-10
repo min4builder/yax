@@ -23,10 +23,9 @@ static void del(Conn *c)
 {
 	free(c);
 }
-static Conn *dup(Conn *c, const char *name)
+static Conn *dup(Conn *c)
 {
 	ref(c);
-	(void) name;
 	return c;
 }
 

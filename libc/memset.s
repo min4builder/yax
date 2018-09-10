@@ -2,18 +2,15 @@ global memset:function (memset.end - memset)
 
 section .text
 memset:
-	push ebp
-	mov ebp, esp
 	push edi
 	push ecx
-	mov edi, [ebp+8]
-	mov eax, [ebp+12]
-	mov ecx, [ebp+16]
+	mov edi, [esp+12]
+	mov eax, [esp+16]
+	mov ecx, [esp+20]
 	rep stosb
-	mov eax, [ebp+8]
 	pop ecx
 	pop edi
-	pop ebp
+	mov eax, [esp+4]
 	ret
 .end:
 

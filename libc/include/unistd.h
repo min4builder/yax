@@ -1,9 +1,13 @@
-#ifndef _UNISTD_H
-#define _UNISTD_H
+#include <_yalc.h>
 
-#include <stddef.h>
-#include <sys/incantations.h>
-#include <sys/types.h>
+#if !defined(_UNISTD_H_POSIX) && _YALC_NEED_POSIX
+#define _UNISTD_H_POSIX
+
+#include <stdint.h>
+
+#ifndef NULL
+#define NULL _YalcNULL
+#endif
 
 #define SEEK_SET 0
 #define SEEK_CUR 1
@@ -12,28 +16,36 @@
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 
+_YALCDEFTYPE(size_t);
+_YALCDEFTYPE(ssize_t);
+_YALCDEFTYPE(uid_t);
+_YALCDEFTYPE(gid_t);
+_YALCDEFTYPE(off_t);
+_YALCDEFTYPE(pid_t);
+
 extern char **environ;
 
 int close(int);
 int dup2(int, int);
+int execve(const char *, char *const[], char *const[]);
+_Noreturn void _exit(int);
+_Noreturn void exit(int);
+pid_t fork(void);
 off_t lseek(int, off_t, int);
 ssize_t read(int, void *, size_t);
 ssize_t write(int, const void *, size_t);
-int execve(const char *, const char *[], const char *[]);
 
-pid_t fork(void);
+#endif /* _UNISTD_H_POSIX */
 
-void _exit(int) __noreturn;
-void exit(int) __noreturn;
+#if !defined(_UNISTD_H_YAX) && _YALC_NEED_YAX
+#define _UNISTD_H_YAX
 
-#ifdef _YAX_
 #include <yax/rfflags.h>
 
-pid_t rfork(int);
 int exec(const char *, const char *, const char *);
-void exits(const char *) __noreturn;
-void _exits(const char *) __noreturn;
-#endif /* _YAX_ */
+_Noreturn void _exits(const char *);
+_Noreturn void exits(const char *);
+pid_t rfork(int);
 
-#endif /* _UNISTD_H */
+#endif /* _UNISTD_H_YAX */
 

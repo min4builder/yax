@@ -1,7 +1,7 @@
+#include <string.h>
 #include <sys/types.h>
 #include <yax/openflags.h>
 #include "conn.h"
-#include "libk.h"
 #include "lock.h"
 #include "mem/malloc.h"
 #include "multitask.h"
@@ -71,10 +71,9 @@ static void del(Conn *c)
 	free(p->b);
 	free(p);
 }
-static Conn *dup(Conn *c, const char *name)
+static Conn *dup(Conn *c)
 {
 	ref(c);
-	(void) name;
 	return c;
 }
 

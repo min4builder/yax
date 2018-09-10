@@ -1,10 +1,11 @@
+#define __YAX__
+#include <stdlib.h>
 #include <unistd.h>
 
-void _fini(void);
-
-void exit(int n)
+_Noreturn void exit(int n)
 {
-	_fini();
-	_exit(n);
+	char s[32];
+	itoa(n & 0xff, s, sizeof(s));
+	exits(s);
 }
 

@@ -1,8 +1,9 @@
+#define __YAX__
 #include <fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-static pid_t spawn(const char *name, const char **argv)
+static pid_t spawn(const char *name, char **argv)
 {
 	pid_t p;
 	if((p = fork()) > 0)

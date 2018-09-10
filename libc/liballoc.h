@@ -1,6 +1,8 @@
 #ifndef _LIBALLOC_H
 #define _LIBALLOC_H
 
+#include <stddef.h>
+#include <stdint.h>
 #include <sys/mman.h>
 
 /** \defgroup ALLOCHOOKS liballoc hooks 
@@ -35,7 +37,7 @@ extern "C" {
  * failure.
  */
 //extern int liballoc_lock();
-#define liballoc_lock() (0)
+#define liballoc_lock() ((void)0)
 
 /** This function unlocks what was previously locked by the liballoc_lock
  * function.  If it disabled interrupts, it enables interrupts. If it
@@ -44,7 +46,7 @@ extern "C" {
  * \return 0 if the lock was successfully released.
  */
 //extern int liballoc_unlock();
-#define liballoc_unlock() (0)
+#define liballoc_unlock() ((void)0)
 
 /** This is the hook into the local system which allocates pages. It
  * accepts an integer parameter which is the number of pages
@@ -54,7 +56,7 @@ extern "C" {
  * \return A pointer to the allocated memory.
  */
 //extern void* liballoc_alloc(size_t);
-#define liballoc_alloc(n) mmap(0, (n) * l_pageSize, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, 0, 0)
+#define liballoc_alloc(x) mmap(0, (x) * 4096, PROT_READ | PROT_WRITE, MAP_ANONYMOUS, 0, 0)
 
 /** This frees previously allocated memory. The void* parameter passed
  * to the function is the exact same value returned from a previous
@@ -65,9 +67,9 @@ extern "C" {
  * \return 0 if the memory was successfully freed.
  */
 //extern int liballoc_free(void*,size_t);
-#define liballoc_free(p, l) munmap((p), (l) * l_pageSize)
+#define liballoc_free(x, l) munmap(x, (l) * 4096)
 
-#define l_pageSize 4096
+
        
 
 extern void    *PREFIX(malloc)(size_t);				///< The standard function.

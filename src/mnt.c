@@ -1,7 +1,7 @@
+#include <string.h>
 #include <yax/bit.h>
 #include <yax/openflags.h>
 #include "conn.h"
-#include "libk.h"
 #include "mem/malloc.h"
 #include "mem/usrboundary.h"
 #include "mnt.h"
@@ -94,10 +94,9 @@ static void sdel(Conn *c)
 {
 	free(c);
 }
-static Conn *sdup(Conn *c, const char *path)
+static Conn *sdup(Conn *c)
 {
 	ref(c);
-	(void) path;
 	return c;
 }
 
@@ -385,11 +384,11 @@ static void cdel(Conn *c_)
 	unref(c->s);
 	free(c);
 }
-static Conn *cdup(Conn *c_, const char *path)
+static Conn *cdup(Conn *c_)
 {
 	Client *c = (Client *) c_;
 	Client *newc = calloc(1, sizeof(*newc));
-	conninit((Conn *)newc, path, c->c.qid, &cops, c->s);
+	conninit((Conn *)newc, "", c->c.qid, &cops, c->s);
 	newc->s = c->s;
 	ref(newc->s);
 	c->msg.fn = MSGDUP;

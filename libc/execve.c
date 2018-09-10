@@ -1,4 +1,4 @@
-#define _YAX_
+#define __YAX__
 #include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -14,7 +14,7 @@ static size_t qlen(const char *s)
 	return len;
 }
 
-static char *quoteall(const char *a[])
+static char *quoteall(char *const a[])
 {
 	size_t slen = 0;
 	char *s = 0;
@@ -42,7 +42,7 @@ static char *quoteall(const char *a[])
 	return s;
 }
 
-int execve(const char *name, const char *argv[], const char *envp[])
+int execve(const char *name, char *const argv[], char *const envp[])
 {
 	char *nargv = quoteall(argv);
 	char *nenvp = quoteall(envp);

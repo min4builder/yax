@@ -1,7 +1,7 @@
 #define NDEBUG
+#include <string.h>
 #include <sys/types.h>
 #include <yax/mapflags.h>
-#include "libk.h"
 #include "mem/pgdir.h"
 #include "mem/phys.h"
 #include "mem/ref.h"

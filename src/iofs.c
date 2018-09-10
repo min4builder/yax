@@ -1,3 +1,4 @@
+#include <string.h>
 #include <sys/types.h>
 #include <yax/bit.h>
 #include <yax/errorcodes.h>
@@ -5,7 +6,6 @@
 #include <yax/stat.h>
 #include "conn.h"
 #include "iofs.h"
-#include "libk.h"
 #include "lock.h"
 #include "mem/malloc.h"
 #include "multitask.h"
@@ -47,23 +47,20 @@ Conn *iofsnew(void)
 
 static void del(Conn *c)
 {
-	free(c->name);
 	free(c);
 }
 
-static Conn *iodup(Conn *c, const char *name)
+static Conn *iodup(Conn *c)
 {
 	IoConn *d = calloc(1, sizeof(*d));
 	memcpy(d, c, sizeof(*d));
-	c->name = (char *) name;
 	return (Conn *) d;
 }
 
-static Conn *dirdup(Conn *c, const char *name)
+static Conn *dirdup(Conn *c)
 {
 	DirConn *d = calloc(1, sizeof(*d));
 	memcpy(d, c, sizeof(*d));
-	c->name = (char *) name;
 	return (Conn *) d;
 }
 

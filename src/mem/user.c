@@ -1,5 +1,5 @@
+#include <string.h>
 #include <yax/mapflags.h>
-#include "libk.h"
 #include "mem/malloc.h"
 #include "mem/phys.h"
 #include "mem/ref.h"

@@ -1,5 +1,7 @@
 #define NDEBUG
+#define __YAX__
 #include <stdint.h>
+#include <string.h>
 #include <yax/errorcodes.h>
 #include <yax/mapflags.h>
 #include <yax/openflags.h>
@@ -8,7 +10,6 @@
 #include "conn.h"
 #include "exec.h"
 #include "fds.h"
-#include "libk.h"
 #include "mem/malloc.h"
 #include "mem/usrboundary.h"
 #include "mem/virt.h"
@@ -497,7 +498,7 @@ ssize_t sys_fd2path(int fd, char *buf, size_t len)
 	Conn *c = FD2CONN(fd);
 	if(!c || !verusrptr(buf, len, PROT_WRITE))
 		return -EINVAL;
-	return strlcpy(buf, c->name, len);
+	return strlcpy(buf, c->name->s, len);
 }
 
 ssize_t sys_fstat(int fd, void *buf, size_t len)

@@ -1,13 +1,12 @@
-#define _YAX_
+#define __YAX__
+#include <errno.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/mount.h>
 #include <sys/port.h>
 #include <sys/serve.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <yax/errorcodes.h>
 
 static char map[] = {
 	0x00, 0x1b, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '[', ']', '\b',
@@ -55,8 +54,9 @@ int main(int argc, char **argv)
 			break;
 		case MSGWRITE:
 			r.u.rw.off = off;
+			/* FALLTHRU */
 		case MSGPWRITE: {
-			int b;
+			size_t b;
 			a = r.u.rw.off;
 			for(b = 0; b < r.u.rw.len; b++) {
 				char c = ((char *) r.u.rw.buf)[b];
@@ -109,7 +109,7 @@ int main(int argc, char **argv)
 					goto outloop;
 				}
 				for(err = 0, j = 0; err < i; err++) {
-					char c = inb(0x60);
+					unsigned char c = inb(0x60);
 					if(c > sizeof(map)/sizeof(map[0]) || map[c] == 0)
 						continue;
 					((char *)r.u.rw.buf)[j++] = map[c];
@@ -150,6 +150,7 @@ outloop:		break;
 		answer(r, mnt);
 	}
 
+	(void) argc, (void) argv;
 	return 0;
 }
 

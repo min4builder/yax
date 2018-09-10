@@ -1,18 +1,13 @@
-#define _YAX_
-#include <stdint.h>
-#include <string.h>
+#define __YAX__
 #include <sys/mount.h>
-#include <sys/types.h>
 #include <unistd.h>
-#include <yax/errorcodes.h>
-#include <yax/mapflags.h>
-#include <yax/mountflags.h>
-#include <yax/openflags.h>
-#include <yax/rfflags.h>
-#include <yax/stat.h>
 
 extern char initrd;
 extern size_t initrdlen;
+
+extern char **environ;
+
+void tarfsserve(int, char *, size_t);
 
 int main(int argc, char **argv)
 {
@@ -28,6 +23,7 @@ int main(int argc, char **argv)
 	} else
 		tarfsserve(mnt, &initrd, initrdlen);
 
+	(void) argc;
 	return 0;
 }
 

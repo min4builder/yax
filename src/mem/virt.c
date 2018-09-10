@@ -1,11 +1,11 @@
 #define NDEBUG
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 #include <yax/errorcodes.h>
 #include <yax/mapflags.h>
 #include "arch.h"
 #include "boot.h"
-#include "libk.h"
 #include "mem/malloc.h"
 #include "mem/pgdir.h"
 #include "mem/phys.h"
@@ -254,7 +254,7 @@ void dumpregs(Regs *);
 
 void page_fault(Regs *r, void *addr, uint32_t err)
 {
-	PgEntry pe;
+	PgEntry pe = 0;
 	(printk)("Page fault 0x");
 	(uxprintk)((uint32_t)addr);
 	(printk)(" PDE: ");
@@ -286,7 +286,7 @@ void page_fault(Regs *r, void *addr, uint32_t err)
 				pe = pgemk(pg->p, pg->prot, pg->noshare);
 				pgmap(((uintptr_t) addr / PGLEN) * PGLEN, pe | PGWRITEABLE);
 				if(!pg->c)
-					memset((void *) (((uintptr_t) addr / PGLEN) * PGLEN), 0xBE, PGLEN);
+					memset((void *) (((uintptr_t) addr / PGLEN) * PGLEN), 0, PGLEN);
 				else {
 					connpread(pg->c, (void *) (((uintptr_t) addr / PGLEN) * PGLEN + pg->start), pg->len, pg->off);
 					memset((void *) (((uintptr_t) addr / PGLEN) * PGLEN) + pg->start + pg->len, 0, PGLEN - (pg->len + pg->start));

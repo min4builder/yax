@@ -1,7 +1,7 @@
-#define _YAX_
+#define __YAX__
 #include <unistd.h>
 
-void abort(void)
+_Noreturn void abort(void)
 {
 	_exits("abort");
 }

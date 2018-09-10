@@ -1,13 +1,19 @@
+#include <_yalc.h>
+
 #ifndef _TYPES_H
 #define _TYPES_H
 
-#include <stddef.h>
-#include <stdint.h>
-
-typedef int64_t off_t;
-typedef int32_t pid_t;
-typedef int32_t clock_t;
-typedef int32_t ssize_t;
+_YALCDEFTYPE(blkcnt_t);
+_YALCDEFTYPE(blksize_t);
+_YALCDEFTYPE(clock_t);
+_YALCDEFTYPE(gid_t);
+_YALCDEFTYPE(id_t);
+_YALCDEFTYPE(off_t);
+_YALCDEFTYPE(pid_t);
+_YALCDEFTYPE(size_t);
+_YALCDEFTYPE(ssize_t);
+_YALCDEFTYPE(time_t);
+_YALCDEFTYPE(uid_t);
 
 #endif /* _TYPES_H */
 
