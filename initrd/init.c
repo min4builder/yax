@@ -24,6 +24,7 @@ int main(int argc, char **argv)
 		fd = open("/dev/cons", O_RDWR);
 	while((res = read(fd, buf, sizeof(buf))) > 0)
 		write(fd, buf, res);
+	(void) argc, (void) argv;
 	return res;
 }
 

@@ -23,24 +23,13 @@ overview.
 
 Then setup your environment with `. ./config.sh`.
 
-    cd libc
-    make
-    cd ..
-    cd drivers
-    make
-    cd ..
-    cd initrd
-    make
-    cd ..
-    cd src
     make
 
-Then, on `src/`, `make test` for a qemu-based test run.
+Then, `make test` for a qemu-based test run.
 
 ## Legal
 All code I wrote is under the (Expat) MIT license (previously public domain).
 Code not written by me:
 
  - liballoc was under the public domain; this version relicensed to MIT
- - PDCLib is under CC0
 

@@ -15,5 +15,5 @@ sf: init ../drivers/cons
 	rm -rf it
 
 clean:
-	rm -f *.o *.a initrd sf
+	rm -f *.o *.a initrd sf init
 
