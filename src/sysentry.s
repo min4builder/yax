@@ -21,6 +21,7 @@ extern sys_read
 extern sys_write
 extern sys_seek
 extern sys_dup2
+extern sys_chdir
 extern sys_pipe
 extern sys_mountfd
 extern sys_fd2path
@@ -156,7 +157,7 @@ calltable:
 	dd sys_seek
 	dd sys_dup2
 	dd 0 ;sys_poll
-	dd 0 ;sys_chdir
+	dd sys_chdir
 	dd sys_pipe
 	dd sys_mountfd ;sys_mount
 	dd sys_fd2path

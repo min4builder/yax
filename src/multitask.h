@@ -8,6 +8,7 @@
 #include "fds.h"
 #include "lock.h"
 #include "mem/pgdir.h"
+#include "mem/str.h"
 #include "name.h"
 
 typedef struct Proc Proc;
@@ -32,7 +33,7 @@ struct Proc {
 	Proc *parent;
 
 	FdList *fds;
-	char *cwd; /* TODO make this CoW reference counted */
+	Str *cwd;
 	MountTab *mounttab;
 
 	char exitstring[ERRLEN];

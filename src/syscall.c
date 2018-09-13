@@ -28,16 +28,16 @@
 
 void sys_exits(const char *s)
 {
-	iprintk(curproc->pid);
-	printk(": exits(\"");
+	(iprintk)(curproc->pid);
+	(printk)(": exits(\"");
 	if(s && !verusrstr(s, PROT_READ)) {
-		printk("<invalid>\")\n");
+		(printk)("<invalid>\")\n");
 		procexits("");
 	}
 	if(s == 0)
 		s = "";
-	printk(s);
-	printk("\")\n");
+	(printk)(s);
+	(printk)("\")\n");
 	procexits(s);
 }
 
@@ -443,6 +443,19 @@ int sys_dup2(int from, int to)
 	if(to < 0)
 		return fdalloc(c);
 	return FDSET(to, c);
+}
+
+void sys_chdir(const char *name)
+{
+	iprintk(curproc->pid);
+	printk(": chdir(");
+	if(!verusrstr(name, PROT_READ)) {
+		printk("<invalid>);\n");
+		return;
+	}
+	printk(name);
+	vfschdir(name);
+	printk(");\n");
 }
 
 int sys_mountfd(const char *from, int to, int fl)

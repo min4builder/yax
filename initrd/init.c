@@ -20,8 +20,9 @@ int main(int argc, char **argv)
 	char buf[128];
 	char *a[] = { "/bin/cons", 0 };
 	spawn("/bin/cons", a);
+	chdir("/dev");
 	while(fd < 0)
-		fd = open("/dev/cons", O_RDWR);
+		fd = open("cons", O_RDWR);
 	while((res = read(fd, buf, sizeof(buf))) > 0)
 		write(fd, buf, res);
 	(void) argc, (void) argv;

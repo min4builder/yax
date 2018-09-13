@@ -151,6 +151,6 @@ outloop:		break;
 	}
 
 	(void) argc, (void) argv;
-	return 0;
+	return 1;
 }
 

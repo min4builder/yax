@@ -34,6 +34,7 @@ pid_t fork(void);
 off_t lseek(int, off_t, int);
 ssize_t read(int, void *, size_t);
 ssize_t write(int, const void *, size_t);
+int chdir(const char *);
 
 #endif /* _UNISTD_H_POSIX */
 

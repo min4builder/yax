@@ -53,10 +53,11 @@ char *nameclean(const char *name)
 		curn = newname = malloc(strlen(name)+1);
 		*curn++ = *name++;
 	} else {
-		int len = strlen(curproc->cwd);
-		curn = newname = malloc(strlen(name) + len + 1);
-		memcpy(newname, curproc->cwd, len);
-		curn += len;
+		int len = strlen(curproc->cwd->s);
+		curn = newname = malloc(strlen(name) + len + 2);
+		memcpy(newname, curproc->cwd->s, len);
+		newname[len] = '/';
+		curn += len + 1;
 	}
 	while(*name) {
 		if(name[0] == '/' || (name[0] == '.' && (name[1] == '/' || !name[1]))) {
@@ -100,6 +101,9 @@ Conn *vfsgetfid(const char *name, int nolastwalk)
 	Str *sname = strmk(newname);
 	int err;
 	name = newname + 1; /* skip initial / */
+	printk("[getfid ");
+	printk(newname);
+	printk("]");
 	do {
 		if(!mount) /* at the beginning or last walk succeeded */
 			mount = curproc->mounttab->first;
@@ -152,11 +156,12 @@ bail:
 
 Conn *vfsopen(const char *name, enum openflags fl, int mode)
 {
-	Conn *c = vfsgetfid(name, !!(fl & OCREAT));
+	Conn *c;
 	int err;
 	printk("[open ");
 	printk(name);
 	printk(" = ");
+	c = vfsgetfid(name, !!(fl & OCREAT));
 	uxprintk((uintptr_t) c);
 	printk("]\n");
 	if(PTRERR(c))
@@ -213,8 +218,9 @@ int vfsmount(const char *name, Conn *newc, enum mountflags fl)
 
 int vfschdir(const char *name)
 {
-	/* FIXME */
-	curproc->cwd = (char *) name;
+	char *newname = nameclean(name);
+	unref(curproc->cwd);
+	curproc->cwd = strmk(newname);
 	return 0;
 }
 

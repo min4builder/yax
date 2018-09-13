@@ -43,7 +43,7 @@ sys write, 16
 sys lseek, 17
 sys dup2, 18
 ;sys poll, 19
-;sys chdir, 20
+sys chdir, 20
 
 sys pipe, 21
 sys __mountfd, 22;sys mount, 22

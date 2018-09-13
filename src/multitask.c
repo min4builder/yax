@@ -71,13 +71,16 @@ static Proc *findpid(int pid)
 
 void procsetup(void)
 {
+	char *slash;
 	nullproc = calloc(1, sizeof(Proc));
 	nullproc->pid = 0;
 	nullproc->quantum = 0;
 	nullproc->priority = 5;
 	nullproc->parent = nullproc;
 	nullproc->fds = fdlistnew();
-	nullproc->cwd = "/";
+	slash = malloc(sizeof "/");
+	strcpy(slash, "/");
+	nullproc->cwd = strmk(slash);
 	nullproc->mounttab = mountnew();
 	nullproc->handling = 0;
 	nullproc->handler = 0;
@@ -115,18 +118,19 @@ void *procswitchgut(void *sp)
 {
 	Proc *prev;
 	CRITSEC {
-		curproc->quantum = curproc->priority;
-		curproc->sp = sp;
 		prev = curproc;
+		prev->quantum = prev->priority;
 		curproc = curproc->next;
 		/* if the next one is the null task, skip it;
-		 * if *that* one is also the null task, we've got nothing else to do,
-		 * therefore, we run the null task anyways. */
-		if(curproc == nullproc) {
+		 * if *that* one is also the null task, we've got nothing else
+		 * to run, therefore, we run the null task anyways. */
+		if(curproc == nullproc)
 			curproc = curproc->next;
+		if(curproc != prev) {
+			prev->sp = sp;
+			prev->syscallstack = switchsyscallstack(curproc->syscallstack);
+			prev->pd = switchpgdir(curproc->pd);
 		}
-		prev->pd = switchpgdir(curproc->pd);
-		prev->syscallstack = switchsyscallstack(curproc->syscallstack);
 	}
 	cprintk('%');
 	iprintk(curproc->pid);
@@ -217,12 +221,19 @@ pid_t procrforkgut(void *sp, enum rfflags fl)
 	new->priority = curproc->priority;
 	new->kstack = vpgkmap(0x10000, PROT_READ | PROT_WRITE);
 	new->syscallstack = (uint8_t *) new->kstack + 0x10000;
-	new->cwd = curproc->cwd; /* XXX FIXME XXX */
+	new->cwd = curproc->cwd;
+	ref(new->cwd);
 	if(fl & RFNAMEG)
 		new->mounttab = mountcopy(curproc->mounttab);
 	else {
 		new->mounttab = curproc->mounttab;
 		ref(new->mounttab);
+	}
+	if(fl & RFFDG)
+		new->fds = fdlistcopy(curproc->fds);
+	else {
+		ref(curproc->fds);
+		new->fds = curproc->fds;
 	}
 	if(curproc->handling)
 		new->handling = (uint8_t *) curproc->handling - (uint8_t *) curproc->syscallstack + (uint8_t *) new->syscallstack;
@@ -234,16 +245,6 @@ pid_t procrforkgut(void *sp, enum rfflags fl)
 	RFORKREGADJUST(new->sp, curproc->syscallstack, new->syscallstack);
 
 	CRITSEC {
-		if(fl & RFFDG)
-			new->fds = fdlistcopy(curproc->fds);
-		else {
-			ref(curproc->fds);
-			new->fds = curproc->fds;
-		}
-
-		/* XXX */
-		new->cwd = curproc->cwd;
-
 		new->next = curproc->next;
 		curproc->next = new;
 		for(p = procbypid; p->nextpid && p->nextpid->pid < new->pid; p = p->nextpid) {}

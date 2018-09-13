@@ -49,6 +49,7 @@ static void freeup(const RefCounted *rc)
 		Page *p = pmapget(pl->e[i]);
 		unref(p);
 	}
+	free(pl->e);
 	free(pl);
 }
 
@@ -57,8 +58,8 @@ PgList *getusrptr(const void *p, size_t len)
 	uintptr_t pgs = (uintptr_t) p;
 	uintptr_t i;
 	PgDir *pt;
-	PgList *pl = calloc(1, sizeof(PgList) + sizeof(PgEntry) * (len / PGLEN));
-	pl->e = (void *) ((char *) pl + sizeof(PgList));
+	PgList *pl = calloc(1, sizeof(PgList));
+	pl->e = calloc((len + PGLEN - 1) / PGLEN, sizeof(PgEntry));
 	mkref(pl, freeup);
 	pl->len = len;
 	pl->delta = pgs % PGLEN;
