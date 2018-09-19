@@ -205,6 +205,45 @@ void (*sys_notify(void (*f)(void *, const char *)))(void *, const char *)
 	return proconnotify(f);
 }
 
+void sys_ioperm(size_t start, size_t end, int on)
+{
+	size_t newstart, newend;
+	uint8_t *newbm;
+	iprintk(curproc->pid);
+	printk(": ioperm(0x");
+	uxprintk(start);
+	printk("-0x");
+	uxprintk(end);
+	if(on)
+		printk(", on);\n");
+	else
+		printk(", off);\n");
+	if(start < curproc->iobmstart || end > curproc->iobmend) {
+		newstart = start / 8 < curproc->iobmstart ? start / 8 : curproc->iobmstart;
+		newend = (end + 7) / 8 > curproc->iobmend ? (end + 7) / 8 : curproc->iobmend;
+		newbm = malloc(newend - newstart);
+		if(curproc->iobmend > curproc->iobmstart)
+			memcpy(newbm + curproc->iobmstart - newstart, curproc->iobm, curproc->iobmend - curproc->iobmstart);
+		else
+			memset(newbm, 0xFF, newend - newstart);
+		curproc->iobmstart = newstart;
+		curproc->iobmend = newend;
+		if(curproc->iobm)
+			free(curproc->iobm);
+		curproc->iobm = newbm;
+	}
+	if(on) {
+		size_t i;
+		for(i = start; i <= end; i++)
+			curproc->iobm[i / 8 - curproc->iobmstart] &= ~(1 << (i % 8));
+	} else {
+		size_t i;
+		for(i = start; i <= end; i++)
+			curproc->iobm[i / 8 - curproc->iobmstart] |= 1 << (i % 8);
+	}
+	memcpy(tss_iobm + curproc->iobmstart, curproc->iobm, curproc->iobmend - curproc->iobmstart);
+}
+
 void sys_noted(enum nflags f)
 {
 	iprintk(curproc->pid);

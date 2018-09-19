@@ -49,6 +49,8 @@ struct Proc {
 	void *sp;
 	void *syscallstack;
 	void *kstack;
+	size_t iobmstart, iobmend;
+	uint8_t *iobm;
 
 	Proc *next;
 	Proc *bnext;
@@ -61,8 +63,6 @@ void procsetup(void);
 void procswitch(void);
 pid_t procrfork(enum rfflags);
 void procexits(const char *);
-void proclightnew(void (*)(void *), void *);
-void proclightexit(void);
 void procsleep(clock_t);
 void procalarm(clock_t);
 void procnotify(int, const char *);

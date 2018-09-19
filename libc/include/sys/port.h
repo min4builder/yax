@@ -5,7 +5,7 @@
 
 void outb(int port, unsigned char byte);
 unsigned char inb(int port);
-void __iopl(void);
+void ioperm(size_t, size_t, int);
 
 #endif /* _PORT_H */
 

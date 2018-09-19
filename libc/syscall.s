@@ -26,7 +26,7 @@ sys mmap, 4
 sys munmap, 5
 
 sys notify, 6
-sys __iopl, 7
+sys ioperm, 7
 sys noted, 8
 
 sys sleep, 9

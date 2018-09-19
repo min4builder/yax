@@ -1,6 +1,5 @@
 global procrfork:function (procrfork.end - procrfork)
 global procexits:function (procexits.end - procexits)
-global proclightexit:function (proclightexit.end - proclightexit)
 global procswitch:function (procswitch.end - procswitch)
 global prochandle:function (prochandle.end - prochandle)
 global procusrcall:function (procusrcall.end - procusrcall)
@@ -11,8 +10,6 @@ extern procunblock
 extern procrforkgut
 extern procexitsgut1
 extern procexitsgut2
-extern proclightexitgut1
-extern proclightexitgut2
 extern procswitchgut
 extern prochandlegut
 
@@ -74,23 +71,6 @@ procexits:
 	mov esp, eax
 	push ecx
 	call procexitsgut2
-	add esp, 4
-	popad
-	pop ds
-	pop es
-	pop fs
-	pop gs
-	iret
-.end:
-proclightexit:
-	sub esp, 4 ; for p
-	lea eax, [esp+8]
-	push eax
-	call proclightexitgut1
-	mov ecx, [esp+12] ; p
-	mov esp, eax
-	push ecx
-	call proclightexitgut2
 	add esp, 4
 	popad
 	pop ds

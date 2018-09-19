@@ -88,6 +88,9 @@ void procsetup(void)
 	nullproc->pd = getpgdir();
 	nullproc->syscallstack = kernel_stack_bottom;
 	nullproc->kstack = kernel_stack_low;
+	nullproc->iobmstart = 0xFFFF / 8;
+	nullproc->iobmend = 0;
+	nullproc->iobm = 0;
 	nullproc->next = nullproc;
 	nullproc->bnext = 0;
 	nullproc->nextpid = 0;
@@ -130,6 +133,15 @@ void *procswitchgut(void *sp)
 			prev->sp = sp;
 			prev->syscallstack = switchsyscallstack(curproc->syscallstack);
 			prev->pd = switchpgdir(curproc->pd);
+			if(!prev->iobm && curproc->iobm)
+				memcpy(tss_iobm + curproc->iobmstart, curproc->iobm, curproc->iobmend - curproc->iobmstart);
+			else if(prev->iobm && !curproc->iobm)
+				memset(tss_iobm + prev->iobmstart, 0xFF, prev->iobmend - prev->iobmstart);
+			else if(prev->iobm && curproc->iobm) {
+				/* TODO optimize this */
+				memset(tss_iobm + prev->iobmstart, 0xFF, prev->iobmend - prev->iobmstart);
+				memcpy(tss_iobm + curproc->iobmstart, curproc->iobm, curproc->iobmend - curproc->iobmstart);
+			}
 		}
 	}
 	cprintk('%');
@@ -243,6 +255,19 @@ pid_t procrforkgut(void *sp, enum rfflags fl)
 	new->sp = (uint8_t *) sp - (uint8_t *) curproc->syscallstack + (uint8_t *) new->syscallstack;
 	memcpy(new->sp, sp, (uint8_t *) curproc->syscallstack - (uint8_t *) sp);
 	RFORKREGADJUST(new->sp, curproc->syscallstack, new->syscallstack);
+	if(fl & RFMEM) {
+		new->iobmstart = curproc->iobmstart;
+		new->iobmend = curproc->iobmend;
+		if(curproc->iobm) {
+			new->iobm = malloc(new->iobmend - new->iobmstart);
+			memcpy(new->iobm, curproc->iobm, new->iobmend - new->iobmstart);
+		} else
+			new->iobm = 0;
+	} else {
+		new->iobm = 0;
+		new->iobmstart = 0xFFFF / 8;
+		new->iobmend = 0;
+	}
 
 	CRITSEC {
 		new->next = curproc->next;
@@ -293,6 +318,8 @@ void *procexitsgut1(Proc **cp, const char *s)
 		curproc->blocked->waiter = 0;
 		curproc->blocked = 0;
 	}
+	if(curproc->iobm)
+		free(curproc->iobm);
 	lockunlock(&proclock);
 	*cp = curproc;
 	vpgclear();
@@ -303,64 +330,6 @@ void procexitsgut2(Proc *cp)
 {
 	vpgdel(cp->pd);
 	vpgunmap((uint8_t *) cp->kstack, 0x10000);
-}
-
-void proclightnew(void (*f)(void *), void *arg)
-{
-	Proc *new = calloc(1, sizeof(Proc));
-	Regs r;
-	new->pid = 0;
-	new->pd = nullproc->pd;
-	new->parent = nullproc;
-	new->syscallstack = 0;
-	new->handling = 0;
-	new->handler = 0;
-	new->fds = 0;
-	new->quantum = 0;
-	new->priority = nullproc->priority;
-	new->kstack = vpgkmap(0x1000, PROT_READ | PROT_WRITE);
-	new->sp = (uint8_t *) new->kstack + 0x1000;
-	STACKPUSH(new->sp, &arg, sizeof(void *));
-	STACKPUSH(new->sp, 0, sizeof(void *)); /* return addr */
-	r.eip = (uint32_t) f;
-	r.eflags = 0x202;
-	r.ebp = 0;
-	STACKPUSH(new->sp, &r, sizeof(Regs));
-
-	CRITSEC {
-		new->next = curproc->next;
-		curproc->next = new;
-	}
-}
-
-/* proclightexit is in asmschedule.s:
-void proclightexit(void)
-{
-	Proc *p;
-	cli
-	esp = proclightexitgut1(&p, s);
-	proclightexitgut2(p);
-	sti
-	iret
-}
-*/
-
-void *proclightexitgut1(Proc **cp)
-{
-	Proc *p;
-	locklock(&proclock);
-	p = findprev(curproc);
-	p->next = curproc->next;
-	vpgunmap((uint8_t *) curproc->kstack, 0x1000);
-	lockunlock(&proclock);
-	*cp = curproc;
-	return procswitchgut(0);
-}
-
-void proclightexitgut2(Proc *cp)
-{
-	vpgunmap((uint8_t *) cp->kstack, 0x1000);
-	free(cp);
 }
 
 static void sleepalarm(clock_t time, int a)

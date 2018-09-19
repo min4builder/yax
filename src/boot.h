@@ -46,6 +46,9 @@ extern uint8_t kernel_stack_low;
 #define kernel_stack_bottom ((void *) &kernel_stack_bottom)
 #define kernel_stack_low ((void *) &kernel_stack_low)
 
+extern uint8_t tss_iobm;
+#define tss_iobm ((void *) &tss_iobm)
+
 /* ugly linker hacks; see linker.ld */
 extern uint8_t RX_SECTIONS, RX_SECTIONS_LEN,
             RO_SECTIONS, RO_SECTIONS_LEN,

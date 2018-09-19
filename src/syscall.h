@@ -23,6 +23,7 @@ void *sys_mmap(void *, size_t, enum mapprot, enum mapflags, uint32_t, off_t);
 int sys_munmap(void *, size_t);
 
 void (*sys_notify(void (*)(void *, const char *)))(void *, const char *);
+void sys_ioperm(size_t, size_t, int);
 void sys_noted(enum nflags);
 
 void sys_sleep(clock_t);

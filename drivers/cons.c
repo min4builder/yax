@@ -28,7 +28,8 @@ int main(int argc, char **argv)
 	__mountfd("/dev", fd, MAFTER);
 	close(fd);
 
-	__iopl();
+	ioperm(0x3d4, 0x3d5, 1);
+	ioperm(0x60, 0x60, 1);
 
 	for(a = 0; a < 80 * 25; a++) {
 		vga[a*2] = ' ';

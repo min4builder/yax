@@ -10,6 +10,7 @@ extern sys_mkmnt
 extern sys_mmap
 extern sys_munmap
 extern sys_notify
+extern sys_ioperm
 extern sys_noted
 extern sys_sleep
 extern sys_alarm
@@ -127,13 +128,6 @@ _syscall:
 	mov eax, -1 ; -ENOSYS
 	ret
 .end:
-sys_iopl:
-	pushf
-	pop eax
-	or eax, 0x3000
-	push eax
-	popf
-	ret
 
 section .rodata
 calltable:
@@ -144,7 +138,7 @@ calltable:
 	dd sys_mmap
 	dd sys_munmap
 	dd sys_notify
-	dd sys_iopl
+	dd sys_ioperm
 	dd sys_noted
 	dd sys_sleep
 	dd sys_alarm

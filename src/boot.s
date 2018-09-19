@@ -12,6 +12,7 @@ global _kernel_pt2
 global _kernel_lastpt
 global VIRT
 global _tss
+global tss_iobm
 extern _init
 extern kernel_main
 extern _sysenter
@@ -124,7 +125,7 @@ switchsysenter:
 	; fallthrough
 switchsysentry:
 	mov eax, [esp+4]
-	xchg [sysstack], eax
+	xchg [_tss.sysstack], eax
 	ret
 
 section .bss
@@ -151,11 +152,11 @@ gdt:
 .userdata equ $ - gdt
 	seg_desc 0, 3
 .tss equ $ - gdt
-	dw 0x68
+	dw (_tss.end - _tss) & 0xffff
 	dw _tss_loword
 	db _tss_midbyte
 	db 0x89
-	db 0x40
+	db (((_tss.end - _tss) >> 16) & 0xf)
 	db _tss_hibyte
 .end:
 
@@ -199,8 +200,13 @@ switchsyscallstack:
 	dd switchsysentry
 _tss:
 	dd 0
-sysstack:
+.sysstack:
 	dd kernel_stack_bottom
 	dd gdt.data
-times 23 dd 0
+times 22 dd 0
+	dd (.iopb - _tss) << 16
+.iopb:
+tss_iobm equ _tss.iopb
+times 8193 db 0xFF
+.end:
 
