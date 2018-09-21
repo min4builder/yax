@@ -1,9 +1,9 @@
 #ifndef _CONN_H
 #define _CONN_H
 
+#include <sys/lock.h>
+#include <sys/ref.h>
 #include <sys/types.h>
-#include "lock.h"
-#include "mem/ref.h"
 #include "mem/str.h"
 #include "stat.h"
 

@@ -1,13 +1,14 @@
 #define NDEBUG
+#define __YAX__
 #include <string.h>
 #include <sys/types.h>
+#include <sys/ref.h>
 #include <yax/openflags.h>
 #include "conn.h"
 #include "mem/malloc.h"
 #include "multitask.h"
 #include "pipe.h"
 #include "printk.h"
-#include "mem/ref.h"
 
 static void cfree(const RefCounted *rc)
 {

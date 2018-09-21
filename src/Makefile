@@ -4,8 +4,8 @@ LDFLAGS=-T linker.ld -nostdlib
 LIBS=-lk
 
 # boot.o must be first
-OBJS = boot.o conn.o exec.o fds.o int.o iofs.o lock.o main.o mem/malloc.o \
-	mem/pgdir.o mem/pgdirs.o mem/phys.o mem/ref.o mem/str.o mem/user.o \
+OBJS = boot.o conn.o exec.o fds.o int.o iofs.o main.o mem/malloc.o \
+	mem/pgdir.o mem/pgdirs.o mem/phys.o mem/str.o mem/user.o \
 	mem/usrboundary.o mem/virt.o mnt.o multitask.o multitasks.o name.o \
 	pic.o pipe.o pit.o printk.o printkfs.o ssp.o stat.o syscall.o \
 	sysentry.o

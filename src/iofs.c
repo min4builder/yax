@@ -1,4 +1,6 @@
+#define __YAX__
 #include <string.h>
+#include <sys/lock.h>
 #include <sys/types.h>
 #include <yax/bit.h>
 #include <yax/errorcodes.h>
@@ -6,7 +8,6 @@
 #include <yax/stat.h>
 #include "conn.h"
 #include "iofs.h"
-#include "lock.h"
 #include "mem/malloc.h"
 #include "multitask.h"
 #include "pic.h"

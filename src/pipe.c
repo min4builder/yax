@@ -1,8 +1,9 @@
+#define __YAX__
 #include <string.h>
+#include <sys/lock.h>
 #include <sys/types.h>
 #include <yax/openflags.h>
 #include "conn.h"
-#include "lock.h"
 #include "mem/malloc.h"
 #include "multitask.h"
 #include "pipe.h"

@@ -1,4 +1,6 @@
+#define __YAX__
 #include <string.h>
+#include <sys/ref.h>
 #include "mem/malloc.h"
 #include "mem/str.h"
 

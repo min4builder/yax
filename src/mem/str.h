@@ -1,7 +1,7 @@
 #ifndef _MEM_STR_H
 #define _MEM_STR_H
 
-#include "mem/ref.h"
+#include <sys/ref.h>
 
 typedef struct {
 	RefCounted refcnt;

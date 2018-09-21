@@ -1,9 +1,9 @@
 #ifndef _FDS_H
 #define _FDS_H
 
+#include <sys/ref.h>
 #include <sys/types.h>
 #include "conn.h"
-#include "mem/ref.h"
 
 typedef struct {
 	RefCounted refcounted;

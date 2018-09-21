@@ -1,10 +1,10 @@
 #ifndef _MEM_USER_H
 #define _MEM_USER_H
 
+#include <sys/ref.h>
 #include <sys/types.h>
 #include <yax/mapflags.h>
 #include "conn.h"
-#include "mem/ref.h"
 
 typedef struct {
 	RefCounted rc;

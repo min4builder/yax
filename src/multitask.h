@@ -1,12 +1,12 @@
 #ifndef _MULTITASK_H
 #define _MULTITASK_H
 
+#include <sys/lock.h>
 #include <sys/types.h>
 #include <yax/const.h>
 #include <yax/rfflags.h>
 #include "arch.h"
 #include "fds.h"
-#include "lock.h"
 #include "mem/pgdir.h"
 #include "mem/str.h"
 #include "name.h"

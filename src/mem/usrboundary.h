@@ -2,10 +2,10 @@
 #define _MEM_USRBOUNDARY_H
 
 #include <stddef.h>
+#include <sys/ref.h>
 #include <sys/types.h>
 #include <yax/mapflags.h>
 #include "mem/pgdir.h"
-#include "mem/ref.h"
 
 typedef struct {
 	RefCounted refcount;

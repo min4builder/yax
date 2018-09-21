@@ -1,7 +1,9 @@
 #define NDEBUG
+#define __YAX__
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+#include <sys/ref.h>
 #include <yax/errorcodes.h>
 #include <yax/mapflags.h>
 #include "arch.h"
@@ -10,7 +12,6 @@
 #include "mem/pgdir.h"
 #include "mem/phys.h"
 #include "mem/user.h"
-#include "mem/ref.h"
 #include "mem/virt.h"
 #include "multitask.h"
 #include "printk.h"

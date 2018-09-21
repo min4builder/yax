@@ -1,7 +1,8 @@
-#include "lock.h"
-#include "mem/ref.h"
+#define __YAX__
+#include <sys/lock.h>
+#include <sys/ref.h>
 
-/* names in parentheses because of the macros of same name (see ref.h) */
+/* names in parentheses because of the macros of same name (see sys/ref.h) */
 void (mkref)(RefCounted *rc, void (*free)(const RefCounted *))
 {
 	rc->refcnt = 1;

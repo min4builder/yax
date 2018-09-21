@@ -1,5 +1,7 @@
-#ifndef _MACRO_H
-#define _MACRO_H
+#include <_yalc.h>
+
+#if !defined(_SYS_MACRO_H) && defined(_YALC_NEED_YAX)
+#define _SYS_MACRO_H
 
 /*
 I wish I could do this:
@@ -10,7 +12,7 @@ I wish I could do this:
 		somethingoff(l);
 	}
 */
-/* sorry */
+/* Here is the solution */
 #define MACRO_TOKPASTE2_(a, b) a ## b
 #define MACRO_TOKPASTE_(a, b) MACRO_TOKPASTE2_(a, b)
 #define MACRO_LABEL_(l, n) MACRO_TOKPASTE_(MACRO_##l##_, MACRO_TOKPASTE_(__LINE__, _##n##_))
@@ -24,5 +26,5 @@ I wish I could do this:
 		if(1) goto MACRO_LABEL_(WRAP, 2); \
 		else MACRO_LABEL_(WRAP, 1):
 
-#endif /* _MACRO_H */
+#endif /* _SYS_MACRO_H */
 

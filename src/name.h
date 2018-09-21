@@ -1,10 +1,10 @@
 #ifndef _NAME_H
 #define _NAME_H
 
+#include <sys/ref.h>
 #include <yax/mountflags.h>
 #include <yax/openflags.h>
 #include "conn.h"
-#include "mem/ref.h"
 
 typedef struct Mount Mount;
 struct Mount {

@@ -1,10 +1,11 @@
 #define NDEBUG
+#define __YAX__
 #include <string.h>
+#include <sys/ref.h>
 #include <sys/types.h>
 #include <yax/mapflags.h>
 #include "mem/pgdir.h"
 #include "mem/phys.h"
-#include "mem/ref.h"
 #include "mem/user.h"
 #include "printk.h"
 

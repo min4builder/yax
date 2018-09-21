@@ -1,7 +1,9 @@
-#ifndef _MEM_REF_H
-#define _MEM_REF_H
+#include <_yalc.h>
 
-#include "lock.h"
+#if !defined(_SYS_REF_H) && defined(_YALC_NEED_YAX)
+#define _SYS_REF_H
+
+#include <sys/lock.h>
 
 typedef struct RefCounted RefCounted;
 struct RefCounted {
@@ -19,5 +21,5 @@ void unref(const RefCounted *);
 #define ref(x) ref((const RefCounted *) (x))
 #define unref(x) unref((const RefCounted *) (x))
 
-#endif /* _MEM_REF_H */
+#endif /* _SYS_REF_H */
 

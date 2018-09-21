@@ -1,3 +1,4 @@
+#define __YAX__
 #include <string.h>
 #include <yax/bit.h>
 #include <yax/openflags.h>

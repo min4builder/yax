@@ -1,8 +1,9 @@
+#define __YAX__
 #include <string.h>
+#include <sys/ref.h>
 #include <yax/mapflags.h>
 #include "mem/malloc.h"
 #include "mem/phys.h"
-#include "mem/ref.h"
 #include "mem/user.h"
 #include "printk.h"
 

@@ -2,11 +2,11 @@
 #define _MEM_VIRTMMAN_H
 
 #include <stddef.h>
+#include <sys/ref.h>
 #include <sys/types.h>
 #include <yax/mapflags.h>
 #include "conn.h"
 #include "mem/pgdir.h"
-#include "mem/ref.h"
 
 /* used by physmman; must not call any of its functions */
 void *vpgspecmap(uintptr_t);

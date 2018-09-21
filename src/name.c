@@ -1,10 +1,11 @@
 #define NDEBUG
+#define __YAX__
 #include <string.h>
+#include <sys/ref.h>
 #include <yax/mountflags.h>
 #include <yax/openflags.h>
 #include "fds.h"
 #include "mem/malloc.h"
-#include "mem/ref.h"
 #include "multitask.h"
 #include "name.h"
 #include "printk.h"

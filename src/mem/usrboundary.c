@@ -1,9 +1,10 @@
+#define __YAX__
+#include <sys/ref.h>
 #include "mem/malloc.h"
 #include "mem/pgdir.h"
 #include "mem/phys.h"
 #include "mem/user.h"
 #include "mem/usrboundary.h"
-#include "mem/ref.h"
 
 static int verusrpage(uintptr_t p, enum mapprot prot)
 {

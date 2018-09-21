@@ -1,3 +1,4 @@
+#define __YAX__
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
