@@ -5,6 +5,7 @@
 #include "mem/phys.h"
 #include "mem/user.h"
 #include "mem/usrboundary.h"
+#include "printk.h"
 
 static int verusrpage(uintptr_t p, enum mapprot prot)
 {
@@ -45,10 +46,16 @@ int verusrstr(const char *s, enum mapprot prot)
 static void freeup(const RefCounted *rc)
 {
 	PgList *pl = (PgList *) rc;
+	Page *p;
 	unsigned int i;
-	for(i = 0; i < pl->len; i++) {
-		Page *p = pmapget(pl->e[i]);
-		unref(p);
+	for(i = 0; i < pl->len; i += PGLEN) {
+		PgEntry pe = pl->e[i / PGLEN];
+		if(pe & PGNOTMAPPED)
+			p = (Page *) (pe & ~PGNOTMAPPED);
+		else
+			p = pmapget(pe);
+		if(p)
+			unref(p);
 	}
 	free(pl->e);
 	free(pl);
@@ -66,12 +73,17 @@ PgList *getusrptr(const void *p, size_t len)
 	pl->delta = pgs % PGLEN;
 	for(i = pgs; i < pgs + len; i += PGLEN) {
 		Page *p;
+		PgEntry pe;
 		/* TODO security */
 		pt = PT((i / PGLEN) / 1024);
-		pl->e[(i - pgs) / PGLEN] = (*pt)[(i / PGLEN) % 1024] & PGADDR;
-		p = pmapget(pl->e[(i - pgs) / PGLEN]);
+		pe = (*pt)[(i / PGLEN) % 1024] & PGADDR;
+		if(pe & PGNOTMAPPED)
+			p = (Page *) (pe & ~PGNOTMAPPED);
+		else
+			p = pmapget(pl->e[(i - pgs) / PGLEN]);
 		if(p)
 			ref(p);
+		pl->e[(i - pgs) / PGLEN] = pe;
 	}
 	return pl;
 }

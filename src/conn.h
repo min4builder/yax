@@ -10,17 +10,10 @@
 typedef struct Conn Conn;
 
 typedef struct {
+	int impl;
 	void (*del)(Conn *);
 	Conn *(*dup)(Conn *);
-	ssize_t (*pread)(Conn *, void *, size_t, off_t);
-	ssize_t (*read)(Conn *, void *, size_t);
-	ssize_t (*pwrite)(Conn *, const void *, size_t, off_t);
-	ssize_t (*write)(Conn *, const void *, size_t);
-	off_t (*seek)(Conn *, off_t, int);
-	ssize_t (*stat)(Conn *, void *, size_t);
-	ssize_t (*wstat)(Conn *, const void *, size_t);
-	int (*walk)(Conn *, const char *path);
-	int (*open)(Conn *, int, int);
+	long long (*f)(Conn *, int, int, void *, size_t, off_t);
 } Dev;
 
 struct Conn {
@@ -31,21 +24,35 @@ struct Conn {
 	Qid qid;
 };
 
+enum {
+	MWANTSPTR = 1 << 16,
+	MWANTSOFF = 2 << 16,
+	MWANTSWR = 4 << 16,
+	MWANTSFILTER = 0xffff
+};
+enum {
+	MDEL = 0,
+	MDUP = 1,
+	MWALK = 2 | MWANTSPTR,
+	MOPEN = 3,
+	MSREAD = 4 | MWANTSPTR | MWANTSWR,
+	MSWRITE = 5 | MWANTSPTR,
+	MSEEK = 6,
+	MPREAD = 7 | MWANTSPTR | MWANTSWR | MWANTSOFF,
+	MPWRITE = 8 | MWANTSPTR | MWANTSOFF,
+	MSTAT = 9 | MWANTSPTR | MWANTSWR,
+	MWSTAT = 10 | MWANTSPTR,
+	MIOCTL = 11
+};
+
+#define MIMPL(n) (1 << ((n) & MWANTSFILTER))
+#define MIMPLALL (~0)
+
 void conninit(Conn *, const char *, Qid, Dev *, void *);
-
-int connopen(Conn *, int, int);
 Conn *conndup(Conn *, Str *name);
-int connwalk(Conn *, const char *path);
 
-ssize_t connread(Conn *, void *, size_t);
-ssize_t connwrite(Conn *, const void *, size_t);
-off_t connseek(Conn *, off_t, int);
+long long connfunc(Conn *, int, int, void *, size_t, off_t);
 
-ssize_t connpread(Conn *, void *, size_t, off_t);
-ssize_t connpwrite(Conn *, const void *, size_t, off_t);
-
-ssize_t connstat(Conn *, void *, size_t);
-ssize_t connwstat(Conn *, const void *, size_t);
 
 #endif /* _CONN_H */
 

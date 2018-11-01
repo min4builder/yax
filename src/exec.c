@@ -2,8 +2,8 @@
 #define __YAX__
 #include <stdint.h>
 #include <string.h>
+#include <sys/bit.h>
 #include <sys/types.h>
-#include <yax/bit.h>
 #include <yax/errorcodes.h>
 #include "arch.h"
 #include "boot.h"
@@ -110,7 +110,7 @@ uint32_t execmod(void *mod, size_t len, void **entryp, char *argv, char *envp)
 
 static uint32_t elfrun(Conn *c, void **entryp, char *argv, char *envp)
 {
-#define epread(c, buf, len, off) do { int err; if((err = connpread(c, buf, len, off)) < (len)) return err < 0 ? err : -EIO; } while(0)
+#define epread(c, buf, len, off) do { int err; if((err = connfunc(c, MPREAD, 0, buf, len, off)) < (len)) return err < 0 ? err : -EIO; } while(0)
 	uint32_t phs;
 	size_t ph, eph;
 	PgDir *pd;
@@ -188,7 +188,7 @@ noexec:
 uint32_t exec(Conn *c, void **entryp, char *argv, char *envp)
 {
 	uint8_t buf[32];
-	ssize_t err = connpread(c, buf, 32, 0);
+	ssize_t err = connfunc(c, MPREAD, 0, buf, 32, 0);
 	if(err < 0)
 		return err;
 	if(elfident(buf, err)) {

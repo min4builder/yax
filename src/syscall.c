@@ -1,4 +1,4 @@
-#define NDEBUG
+/*#define NDEBUG*/
 #define __YAX__
 #include <stdint.h>
 #include <string.h>
@@ -76,6 +76,7 @@ int sys_exec(const char *name, const char *argv, const char *envp)
 	uint32_t ret;
 	Conn *c;
 	void *entryp;
+	void *newargv, *newenvp;
 	iprintk(curproc->pid);
 	printk(": exec(");
 	if(!verusrstr(name, PROT_READ)) {
@@ -99,15 +100,15 @@ int sys_exec(const char *name, const char *argv, const char *envp)
 	cprintk('"');
 	printk(envp);
 	printk("\") = ");
-	c = vfsopen(name, OREAD | OEXEC, 0);
+	c = vfsopen(name, O_RDONLY | O_EXEC, 0);
 	if(PTRERR(c)) {
 		iprintk(PTR2ERR(c));
 		printk(";\n");
 		return PTR2ERR(c);
 	}
-	void *newargv = malloc(strlen(argv) + 1);
+	newargv = malloc(strlen(argv) + 1);
 	memcpy(newargv, argv, strlen(argv) + 1);
-	void *newenvp = malloc(strlen(envp) + 1);
+	newenvp = malloc(strlen(envp) + 1);
 	memcpy(newenvp, envp, strlen(envp) + 1);
 	ret = exec(c, &entryp, newargv, newenvp);
 	uxprintk(ret);
@@ -278,7 +279,7 @@ int sys_open(const char *name, int fl, int mode)
 	if(!verusrstr(name, PROT_READ)) {
 		printk("<invalid>\", ");
 		uiprintk(fl);
-		if(fl & OCREAT) {
+		if(fl & O_CREAT) {
 			printk(", ");
 			uiprintk(mode);
 		}
@@ -288,7 +289,7 @@ int sys_open(const char *name, int fl, int mode)
 	printk(name);
 	printk("\", ");
 	uiprintk(fl);
-	if(fl & OCREAT) {
+	if(fl & O_CREAT) {
 		printk(", ");
 		uiprintk(mode);
 	}
@@ -304,6 +305,21 @@ int sys_open(const char *name, int fl, int mode)
 	printk(";\n");
 	return fd;
 }
+
+long long sys_func(int fd, int fn, int sub, void *buf, size_t len, off_t off)
+{
+	Conn *c;
+	if(fn & MWANTSPTR) {
+		if(!verusrptr(buf, len, PROT_READ | (fn & MWANTSWR ? PROT_WRITE : 0))) {
+			return -EINVAL;
+		}
+	}
+	c = FD2CONN(fd);
+	if(!c)
+		return -EINVAL;
+	return connfunc(c, fn, sub, buf, len, off);
+}
+
 void sys_close(int fd)
 {
 	iprintk(curproc->pid);
@@ -311,167 +327,6 @@ void sys_close(int fd)
 	uiprintk(fd);
 	printk(");\n");
 	fddealloc(fd);
-}
-
-ssize_t sys_pread(int fd, void *buf, size_t len, off_t off)
-{
-	ssize_t ret;
-	Conn *c;
-	iprintk(curproc->pid);
-	printk(": pread(");
-	uiprintk(fd);
-	printk(", 0x");
-	uxprintk((unsigned int)buf);
-	if(!verusrptr(buf, len, PROT_WRITE)) {
-		printk(" <invalid>, ");
-		uiprintk(len);
-		printk(", ");
-		uiprintk(off);
-		printk(") = -EINVAL;\n");
-		return -EINVAL;
-	}
-	printk(", ");
-	uiprintk(len);
-	printk(", ");
-	uiprintk(off);
-	printk(") = ");
-	c = FD2CONN(fd);
-	if(!c) {
-		printk("-EINVAL;\n");
-		return -EINVAL;
-	}
-	ret = connpread(c, buf, len, off);
-	iprintk(ret);
-	if(ret > 0) {
-		printk(" \"");
-		nprintk(ret, buf);
-		cprintk('"');
-	}
-	printk(";\n");
-	return ret;
-}
-
-ssize_t sys_pwrite(int fd, const void *buf, size_t len, off_t off)
-{
-	ssize_t ret;
-	Conn *c;
-	iprintk(curproc->pid);
-	printk(": pwrite(");
-	uiprintk(fd);
-	printk(", 0x");
-	uxprintk((unsigned int)buf);
-	if(!verusrptr(buf, len, PROT_READ)) {
-		printk(" <invalid>, ");
-		uiprintk(len);
-		printk(", ");
-		uiprintk(off);
-		printk(") = -EINVAL;\n");
-		return -EINVAL;
-	}
-	cprintk('"');
-	nprintk(len, buf);
-	printk("\", ");
-	uiprintk(len);
-	printk(", ");
-	uiprintk(off);
-	printk(") = ");
-	c = FD2CONN(fd);
-	if(!c) {
-		printk("-EINVAL;\n");
-		return -EINVAL;
-	}
-	ret = connpwrite(c, buf, len, off);
-	iprintk(ret);
-	printk(";\n");
-	return ret;
-}
-
-ssize_t sys_read(int fd, void *buf, size_t len)
-{
-	ssize_t ret;
-	Conn *c;
-	iprintk(curproc->pid);
-	printk(": read(");
-	uiprintk(fd);
-	printk(", 0x");
-	uxprintk((unsigned int)buf);
-	if(!verusrptr(buf, len, PROT_WRITE)) {
-		printk(" <invalid>, ");
-		uiprintk(len);
-		printk(") = -EINVAL;\n");
-		return -EINVAL;
-	}
-	printk(", ");
-	uiprintk(len);
-	printk(") = ");
-	c = FD2CONN(fd);
-	if(!c) {
-		printk("-EINVAL;\n");
-		return -EINVAL;
-	}
-	ret = connread(c, buf, len);
-	iprintk(ret);
-	if(ret > 0) {
-		printk(" \"");
-		nprintk(ret, buf);
-		cprintk('"');
-	}
-	printk(";\n");
-	return ret;
-}
-
-ssize_t sys_write(int fd, const void *buf, size_t len)
-{
-	ssize_t ret;
-	Conn *c;
-	iprintk(curproc->pid);
-	printk(": write(");
-	uiprintk(fd);
-	printk(", 0x");
-	uxprintk((unsigned int) buf);
-	if(!verusrptr(buf, len, PROT_READ)) {
-		printk(" <invalid>, ");
-		uiprintk(len);
-		printk(") = -EINVAL;\n");
-		return -EINVAL;
-	}
-	cprintk('"');
-	nprintk(len, buf);
-	printk("\", ");
-	uiprintk(len);
-	printk(") = ");
-	c = FD2CONN(fd);
-	if(!c) {
-		printk("-EINVAL;\n");
-		return -EINVAL;
-	}
-	ret = connwrite(c, buf, len);
-	iprintk(ret);
-	printk(";\n");
-	return ret;
-}
-
-off_t sys_seek(int fd, off_t off, int whence)
-{
-	off_t ret;
-	Conn *c;
-	iprintk(curproc->pid);
-	printk(": seek(");
-	uiprintk(fd);
-	printk(", ");
-	uiprintk(off);
-	printk(", ");
-	uiprintk(whence);
-	printk(") = ");
-	c = FD2CONN(fd);
-	if(!c) {
-		printk("-EINVAL;\n");
-		return -EINVAL;
-	}
-	ret = connseek(c, off, whence);
-	iprintk(ret);
-	printk(";\n");
-	return ret;
 }
 
 int sys_dup2(int from, int to)
@@ -551,68 +406,6 @@ ssize_t sys_fd2path(int fd, char *buf, size_t len)
 	if(!c || !verusrptr(buf, len, PROT_WRITE))
 		return -EINVAL;
 	return strlcpy(buf, c->name->s, len);
-}
-
-ssize_t sys_fstat(int fd, void *buf, size_t len)
-{
-	ssize_t ret;
-	Conn *c;
-	iprintk(curproc->pid);
-	printk(": fstat(");
-	uiprintk(fd);
-	printk(", 0x");
-	uxprintk((unsigned int) buf);
-	if(!verusrptr(buf, len, PROT_WRITE)) {
-		printk(" <invalid>, ");
-		uiprintk(len);
-		printk(") = -EINVAL;\n");
-		return -EINVAL;
-	}
-	cprintk('"');
-	nprintk(len, buf);
-	printk("\", ");
-	uiprintk(len);
-	printk(") = ");
-	c = FD2CONN(fd);
-	if(!c) {
-		printk("-EINVAL;\n");
-		return -EINVAL;
-	}
-	ret = connstat(c, buf, len);
-	iprintk(ret);
-	printk(";\n");
-	return ret;
-}
-
-ssize_t sys_fwstat(int fd, const void *buf, size_t len)
-{
-	ssize_t ret;
-	Conn *c;
-	iprintk(curproc->pid);
-	printk(": fwstat(");
-	uiprintk(fd);
-	printk(", 0x");
-	uxprintk((unsigned int) buf);
-	if(!verusrptr(buf, len, PROT_READ)) {
-		printk(" <invalid>, ");
-		uiprintk(len);
-		printk(") = -EINVAL;\n");
-		return -EINVAL;
-	}
-	cprintk('"');
-	nprintk(len, buf);
-	printk("\", ");
-	uiprintk(len);
-	printk(") = ");
-	c = FD2CONN(fd);
-	if(!c) {
-		printk("-EINVAL;\n");
-		return -EINVAL;
-	}
-	ret = connwstat(c, buf, len);
-	iprintk(ret);
-	printk(";\n");
-	return ret;
 }
 
 int sys_getprintk(void)

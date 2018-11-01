@@ -17,7 +17,11 @@ typedef struct {
 	size_t len;
 } Page;
 
-typedef Page *Pmap[16];
+typedef union Pmap Pmap;
+union Pmap {
+	Pmap *ps[16];
+	Page *p;
+};
 
 Page *pmapget(uintptr_t);
 void pmapset(uintptr_t, Page *);

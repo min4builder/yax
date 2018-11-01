@@ -5,6 +5,7 @@
 
 int mkmnt(int *);
 int __mountfd(const char *, int, int);
+int __getprintk(void);
 
 #endif /* _SYS_MOUNT_H */
 

@@ -4,7 +4,7 @@ LIBK_OBJS=itoa.o lock.o memcmp.o memmove.o memset.o port.o ref.o strcat.o \
 	strcmp.o strcpy.o strlcpy.o strlen.o strncmp.o
 
 OBJS:=_libc_main.o _exit.o abort.o assert.o environ.o errno.o execve.o exit.o \
-	exits.o fork.o liballoc.o serve.o syscall.o $(LIBK_OBJS)
+	exits.o fork.o liballoc.o read.o serve.o syscall.o write.o $(LIBK_OBJS)
 
 all: headers $(LIBINSTALL)/libc.a $(LIBINSTALL)/libk.a $(LIBINSTALL)/crt0.o $(LIBINSTALL)/crti.o $(LIBINSTALL)/crtn.o
 

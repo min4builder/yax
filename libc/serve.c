@@ -1,92 +1,42 @@
 #define __YAX__
 #include <stdlib.h>
 #include <string.h>
+#include <sys/bit.h>
 #include <sys/serve.h>
 #include <unistd.h>
-#include <yax/bit.h>
 
 Req recv(int fd)
 {
-	char buf[21];
+	char buf[28], *bufr = buf;
 	Req m;
-	read(fd, buf, 21);
-	m.fn = buf[0];
-	m.fid = GBIT32(buf+1);
-	switch(m.fn) {
-	case MSGDEL:
-		break;
-	case MSGDUP:
-		break;
-	case MSGPREAD:
-	case MSGPWRITE:
-		m.u.rw.off = GBIT64(buf+13);
-		/* FALLTHRU */
-	case MSGREAD:
-	case MSGWRITE:
-		m.u.rw.len = GBIT32(buf+5);
-		m.u.rw.buf = (void *) GBIT32(buf+9);
-		break;
-	case MSGSEEK:
-		m.u.seek.off = GBIT64(buf+5);
-		m.u.seek.whence = buf[13];
-		break;
-	case MSGSTAT:
-		exits("Stat");
-	case MSGWSTAT:
-		exits("Wstat");
-	case MSGWALK: {
-		size_t len = GBIT32(buf+5);
-		m.u.walk.path = malloc(len + 1);
-		if(len + 9 <= 21)
-			memcpy(m.u.walk.path, buf + 9, len);
-		else
-			read(fd, m.u.walk.path, len);
-		m.u.walk.path[len] = '\0';
-		break;
+	ssize_t len = read(fd, buf, 28);
+	if(len < 0)
+		exit(-len);
+	m.fn = GBIT32(bufr);
+	bufr += 4;
+	m.fid = GBIT32(bufr);
+	bufr += 4;
+	m.submsg = GBIT32(bufr);
+	bufr += 4;
+	if(m.fn & MWANTSPTR) {
+		m.len = GBIT32(bufr);
+		bufr += 4;
+		m.buf = (void *) GBIT32(bufr);
+		bufr += 4;
 	}
-	case MSGOPEN:
-		m.u.open.fl = GBIT32(buf+5);
-		m.u.open.mode = GBIT32(buf+9);
-		break;
+	if(m.fn & MWANTSOFF) {
+		m.off = GBIT64(bufr);
+		bufr += 8;
 	}
 	return m;
 }
 
 void answer(Req m, int fd)
 {
-	char buf[17];
+	char buf[12];
 	PBIT32(buf, m.fid);
-	switch(m.fn) {
-	case MSGDEL:
-		write(fd, buf, 4);
-		return;
-	case MSGDUP:
-		PBIT32(buf+4, m.u.dup.ret);
-		break;
-	case MSGPREAD:
-	case MSGPWRITE:
-	case MSGREAD:
-	case MSGWRITE:
-		PBIT32(buf+4, m.u.rw.ret);
-		break;
-	case MSGSEEK:
-		PBIT64(buf+4, m.u.seek.ret);
-		write(fd, buf, 12);
-		return;
-	case MSGSTAT:
-	case MSGWSTAT:
-		exits("nonsense");
-	case MSGWALK:
-		free(m.u.walk.path);
-		PBIT8(buf+4, m.u.walk.ret.type);
-		PBIT64(buf+5, m.u.walk.ret.path);
-		PBIT32(buf+13, m.u.walk.ret.vers);
-		write(fd, buf, 17);
-		return;
-	case MSGOPEN:
-		PBIT32(buf+4, m.u.open.ret);
-		break;
-	}
-	write(fd, buf, 8);
+	PBIT64(buf+4, m.ret);
+	write(fd, buf, 12);
+	return;
 }
 

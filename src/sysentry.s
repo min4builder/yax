@@ -15,19 +15,13 @@ extern sys_noted
 extern sys_sleep
 extern sys_alarm
 extern sys_open
+extern sys_func
 extern sys_close
-extern sys_pread
-extern sys_pwrite
-extern sys_read
-extern sys_write
-extern sys_seek
 extern sys_dup2
 extern sys_chdir
 extern sys_pipe
 extern sys_mountfd
 extern sys_fd2path
-extern sys_fstat
-extern sys_fwstat
 
 extern sys_getprintk
 
@@ -133,32 +127,24 @@ section .rodata
 calltable:
 	dd sys_exits
 	dd sys_rfork
+	dd sys_notify
+	dd sys_noted
+	dd sys_alarm
+	dd sys_sleep
 	dd sys_exec
-	dd sys_mkmnt
 	dd sys_mmap
 	dd sys_munmap
-	dd sys_notify
-	dd sys_ioperm
-	dd sys_noted
-	dd sys_sleep
-	dd sys_alarm
-	dd sys_open
-	dd sys_close
-	dd sys_pread
-	dd sys_pwrite
-	dd sys_read
-	dd sys_write
-	dd sys_seek
-	dd sys_dup2
-	dd 0 ;sys_poll
-	dd sys_chdir
+	dd sys_mkmnt
 	dd sys_pipe
+	dd sys_dup2
+	dd sys_open
+	dd sys_func
+	dd 0 ;sys_poll
+	dd sys_close
 	dd sys_mountfd ;sys_mount
 	dd sys_fd2path
-	dd 0 ;sys_stat
-	dd sys_fstat
-	dd 0 ;sys_wstat
-	dd sys_fwstat
+	dd sys_chdir
+	dd sys_ioperm
 	dd sys_getprintk ; empty
 .end:
 

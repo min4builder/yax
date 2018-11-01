@@ -147,72 +147,71 @@ void tarfsserve(int fd, char *file)
 	for(;;) {
 		Req r = recv(fd);
 		switch(r.fn) {
-		case MSGDEL:
+		case MDEL:
 			fs[r.fid].f = 0;
 			fs[r.fid].open = 0;
 			break;
-		case MSGDUP: {
+		case MDUP: {
 			int x;
 			for(x = 0; x < 256; x++) {
 				if(fs[x].f == 0) {
 					fs[x].f = fs[r.fid].f;
 					fs[x].open = fs[r.fid].open;
-					r.u.dup.ret = x;
+					r.ret = x;
 					break;
 				}
 			}
 			break;
 		}
-		case MSGREAD:
-			r.u.rw.off = fs[r.fid].off;
+		case MSREAD:
+			r.off = fs[r.fid].off;
 			/* FALLTHRU */
-		case MSGPREAD:
-			r.u.rw.ret = tpread(&fs[r.fid], r.u.rw.buf, r.u.rw.len, r.u.rw.off);
+		case MPREAD:
+			r.ret = tpread(&fs[r.fid], r.buf, r.len, r.off);
 			break;
-		case MSGSEEK:
-			switch(r.u.seek.whence) {
+		case MSEEK:
+			switch(r.submsg) {
 			case 0:
-				fs[r.fid].off = r.u.seek.off;
+				fs[r.fid].off = r.off;
 				break;
 			case 1:
-				fs[r.fid].off += r.u.seek.off;
+				fs[r.fid].off += r.off;
 				break;
 			case 2:
-				fs[r.fid].off = fs[r.fid].f->d.length + r.u.seek.off;
+				fs[r.fid].off = fs[r.fid].f->d.length + r.off;
 				break;
 			}
-			r.u.seek.ret = fs[r.fid].off;
+			r.ret = fs[r.fid].off;
 			break;
-		case MSGSTAT:
+		case MSTAT:
 			exits("broken");
 			break;
-		case MSGWALK: {
+		case MWALK: {
 			File *f;
-			r.u.walk.ret.type = 0xFF;
-			r.u.walk.ret.path = -ENOENT;
+			r.ret = -ENOENT;
 			for(f = fs[r.fid].f->sub; f; f = f->next) {
-				if(!strcmp(f->d.name, r.u.walk.path)) {
+				if(!strncmp(f->d.name, r.buf, r.len)) {
 					fs[r.fid].f = f;
-					r.u.walk.ret = f->d.qid;
+					r.ret = f->d.qid.path;
 					break;
 				}
 			}
 			break;
 		}
-		case MSGOPEN:
-			if(r.u.open.fl & (O_EXCL | O_WRONLY)) {
-				r.u.open.ret = -EACCES;
+		case MOPEN:
+			if(r.submsg & (O_EXCL | O_WRONLY)) {
+				r.ret = -EACCES;
 			} else {
-				fs[r.fid].open = r.u.open.fl;
-				r.u.open.ret = 0;
+				fs[r.fid].open = r.submsg;
+				r.ret = 0;
 			}
 			break;
-		case MSGPWRITE:
-		case MSGWRITE:
-			r.u.rw.ret = -EACCES;
+		case MPWRITE:
+		case MSWRITE:
+			r.ret = -EACCES;
 			break;
-		case MSGWSTAT:
-			r.u.stat.ret = -EACCES;
+		case MWSTAT:
+			r.ret = -EACCES;
 			break;
 		}
 		answer(r, fd);

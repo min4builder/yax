@@ -1,4 +1,4 @@
-#define NDEBUG
+/*#define NDEBUG*/
 #define __YAX__
 #include <string.h>
 #include <sys/lock.h>
@@ -142,11 +142,14 @@ void *procswitchgut(void *sp)
 				memset(tss_iobm + prev->iobmstart, 0xFF, prev->iobmend - prev->iobmstart);
 				memcpy(tss_iobm + curproc->iobmstart, curproc->iobm, curproc->iobmend - curproc->iobmstart);
 			}
-		}
+		} else
+			curproc->sp = sp;
 	}
-	cprintk('%');
-	iprintk(curproc->pid);
-	cprintk('%');
+	if(curproc->pid) {
+		cprintk('%');
+		iprintk(curproc->pid);
+		cprintk('%');
+	}
 	return curproc->sp;
 }
 

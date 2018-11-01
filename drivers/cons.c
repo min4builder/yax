@@ -22,7 +22,7 @@ int main(int argc, char **argv)
 	off_t off = 0;
 	int a;
 	char *vga = mmap(0, 80 * 25 * 2, PROT_READ | PROT_WRITE, MAP_PHYS, 0, 0xB8000);
-	int irq1 = open("/irq/1", OREAD);
+	int irq1 = open("/irq/1", O_RDONLY);
 
 	fd = mkmnt(&mnt);
 	__mountfd("/dev", fd, MAFTER);
@@ -44,23 +44,25 @@ int main(int argc, char **argv)
 	for(;;) {
 		Req r = recv(mnt);
 		switch(r.fn) {
-		case MSGDUP:
-			r.u.dup.ret = 1;
+		case MDEL:
 			break;
-		case MSGOPEN:
-			if(r.u.open.fl & OEXCL)
-				r.u.open.ret = -1;
+		case MDUP:
+			r.ret = 1;
+			break;
+		case MOPEN:
+			if(r.submsg & O_EXCL)
+				r.ret = -1;
 			else
-				r.u.open.ret = 0;
+				r.ret = 0;
 			break;
-		case MSGWRITE:
-			r.u.rw.off = off;
+		case MSWRITE:
+			r.off = off;
 			/* FALLTHRU */
-		case MSGPWRITE: {
+		case MPWRITE: {
 			size_t b;
-			a = r.u.rw.off;
-			for(b = 0; b < r.u.rw.len; b++) {
-				char c = ((char *) r.u.rw.buf)[b];
+			a = r.off;
+			for(b = 0; b < r.len; b++) {
+				char c = ((char *) r.buf)[b];
 				if(c == '\n') {
 					int endl = a + 80 - a % 80;
 					for(; a < 80 * 25 && a < endl; a++) {
@@ -78,7 +80,7 @@ int main(int argc, char **argv)
 						vga[a*2+1] = 0x07;
 					}
 				} else {
-					vga[a*2] = ((char *) r.u.rw.buf)[b];
+					vga[a*2] = c;
 					vga[a*2+1] = 0x07;
 					a++;
 				}
@@ -91,8 +93,8 @@ int main(int argc, char **argv)
 					a = 80 * 24;
 				}
 			}
-			r.u.rw.ret = b;
-			if(r.fn == MSGWRITE) {
+			r.ret = b;
+			if(r.fn == MSWRITE) {
 				off = a;
 				outb(0x03d4, 0x0F);
 				outb(0x03d5, (uint8_t) ((a % (80 * 25)) & 0xFF));
@@ -101,48 +103,44 @@ int main(int argc, char **argv)
 			}
 			break;
 		}
-		case MSGREAD:
-		case MSGPREAD: {
+		case MSREAD:
+		case MPREAD: {
 			int i, j = 0, err;
 			while(!j) {
 				if((err = read(irq1, &i, sizeof(i))) < 0) {
-					r.u.rw.ret = err;
+					r.ret = err;
 					goto outloop;
 				}
 				for(err = 0, j = 0; err < i; err++) {
 					unsigned char c = inb(0x60);
 					if(c > sizeof(map)/sizeof(map[0]) || map[c] == 0)
 						continue;
-					((char *)r.u.rw.buf)[j++] = map[c];
+					((char *)r.buf)[j++] = map[c];
 				}
 			}
-			r.u.rw.ret = j;
+			r.ret = j;
 outloop:		break;
 		}
-		case MSGSEEK:
-			switch(r.u.seek.whence) {
+		case MSEEK:
+			switch(r.submsg) {
 			case 0:
-				off = r.u.seek.off;
+				off = r.off;
 				break;
 			case 1:
-				off += r.u.seek.off;
+				off += r.off;
 				break;
 			case 2:
-				off = 80 * 25 + r.u.seek.off;
+				off = 80 * 25 + r.off;
 				break;
 			}
 			off %= 80 * 25;
-			r.u.seek.ret = off;
+			r.ret = off;
 			break;
-		case MSGWALK:
-			if(strcmp(r.u.walk.path, "cons") != 0) {
-				r.u.walk.ret.type = 0xFF;
-				r.u.walk.ret.path = -ENOENT;
-				r.u.walk.ret.vers = 0;
+		case MWALK:
+			if(strncmp(r.buf, "cons", r.len) != 0) {
+				r.ret = -ENOENT;
 			} else {
-				r.u.walk.ret.type = 0x40;
-				r.u.walk.ret.path = 1;
-				r.u.walk.ret.vers = 0;
+				r.ret = 1;
 			}
 			break;
 		default:

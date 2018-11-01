@@ -131,6 +131,9 @@ void ppgfree(uintptr_t p)
 	PPage *pp = vpgspecmap(p);
 	pp->next = rootppg;
 	rootppg = p;
+	printk("free(");
+	uxprintk(p);
+	printk(")\n");
 }
 
 int ppgreserve(uintptr_t pg)

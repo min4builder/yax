@@ -1,7 +1,8 @@
+#define __YAX__
 #include <stdint.h>
 #include <string.h>
+#include <sys/bit.h>
 #include <sys/types.h>
-#include <yax/bit.h>
 #include <yax/stat.h>
 #include "stat.h"
 

@@ -251,56 +251,76 @@ void vpgdel(PgDir *pd)
 	ppgfree((uintptr_t) pd);
 }
 
+static int ensure(uintptr_t pga, enum mapprot prot)
+{
+	PgEntry pe = (*PGDIR)[pga / PGLEN / 1024];
+	PgDir *pt;
+	if(!(pe & PGPRESENT))
+		return -1;
+	pt = PT(pga / PGLEN / 1024);
+	pe = (*pt)[pga / PGLEN % 1024];
+	if(pe & PGPRESENT) {
+		if((pe & PGCOW) && (prot & PROT_WRITE)) {
+			uintptr_t p2 = pe & PGADDR;
+			Page *pg = pmapget(p2);
+			uintptr_t p = ppgalloc();
+			PgEntry *pep = &(*pt)[pga / PGLEN % 1024];
+			Page *pg2 = pagemk(p, pg->prot, pg->noshare);
+			pmapset(p, pg2);
+			*pep &= ~(PGADDR | PGCOW);
+			*pep |= p | PGWRITEABLE;
+			vpgspecmap(p2);
+			memcpy((void *) pga, SPG, PGLEN);
+			(printk)("CoW new PTE: ");
+			(uxprintk)(*pep);
+			(printk)(" new Page: ");
+			(uxprintk)((uintptr_t) pg2);
+			(cprintk)('\n');
+			return 0;
+		} else if((pe & PGWRITEABLE) || !(prot & PROT_WRITE))
+			return 0;
+	} else if(pe & PGNOTMAPPED) {
+		Page *pg = (Page *) (pe & ~PGNOTMAPPED);
+		if(pg->p == (uintptr_t) NOPHYSPG) {
+			pg->p = ppgalloc();
+			pmapset(pg->p, pg);
+			pe = pgemk(pg->p, pg->prot, pg->noshare);
+			pgmap(pga, pe | PGWRITEABLE);
+			if(!pg->c)
+				memset((void *) pga, 0, PGLEN);
+			else {
+				connfunc(pg->c, MPREAD, 0, (void *) (pga + pg->start), pg->len, pg->off);
+				memset((void *) (pga + pg->start + pg->len), 0, PGLEN - (pg->len + pg->start));
+			}
+			if(!(pe & PGWRITEABLE))
+				pgmap(pga, pe);
+			(printk)(" AoD new PTE: ");
+			(uxprintk)(pe);
+			(cprintk)('\n');
+		} else
+			pgmap(pga, pgemk(pg->p, pg->prot, pg->noshare));
+		return 0;
+	}
+	return -1;
+}
+
 void dumpregs(Regs *);
 
 void page_fault(Regs *r, void *addr, uint32_t err)
 {
 	PgEntry pe = 0;
 	(printk)("Page fault 0x");
-	(uxprintk)((uint32_t)addr);
+	(uxprintk)((uintptr_t)addr);
 	(printk)(" PDE: ");
-	(uxprintk)((*PGDIR)[(unsigned int) addr / PGLEN / 1024]);
-	if((*PGDIR)[(unsigned int) addr / PGLEN / 1024] & PGPRESENT) {
-		PgDir *pt = PT((unsigned int) addr / PGLEN / 1024);
+	(uxprintk)((*PGDIR)[(uintptr_t) addr / PGLEN / 1024]);
+	if((*PGDIR)[(uintptr_t) addr / PGLEN / 1024] & PGPRESENT) {
+		PgDir *pt = PT((uintptr_t) addr / PGLEN / 1024);
 		(printk)(" PTE: ");
-		(uxprintk)((*pt)[(unsigned int) addr / PGLEN % 1024]);
-		if((*pt)[(unsigned int) addr / PGLEN % 1024] & PGPRESENT) {
-			if((*pt)[(unsigned int) addr / PGLEN % 1024] & PGCOW) {
-				uintptr_t p = ppgalloc();
-				PgEntry *pep = &(*pt)[(unsigned int) addr / PGLEN % 1024];
-				uintptr_t p2 = *pep & PGADDR;
-				*pep &= ~(PGADDR | PGCOW);
-				*pep |= p | PGWRITEABLE;
-				vpgspecmap(p2);
-				memcpy((void *) (((uintptr_t) addr / PGLEN) * PGLEN), SPG, PGLEN);
-				(printk)(" CoW new PTE: ");
-				(uxprintk)(*pep);
-				(cprintk)('\n');
-				return;
-			}
-			pe = (*pt)[(unsigned int) addr / PGLEN % 1024];
-		} else if((*pt)[(unsigned int) addr / PGLEN % 1024] & PGNOTMAPPED) {
-			Page *pg = (Page *) ((*pt)[(unsigned int) addr / PGLEN % 1024] & ~PGNOTMAPPED);
-			if(pg->p == (uintptr_t) NOPHYSPG) {
-				pg->p = ppgalloc();
-				pmapset(pg->p, pg);
-				pe = pgemk(pg->p, pg->prot, pg->noshare);
-				pgmap(((uintptr_t) addr / PGLEN) * PGLEN, pe | PGWRITEABLE);
-				if(!pg->c)
-					memset((void *) (((uintptr_t) addr / PGLEN) * PGLEN), 0, PGLEN);
-				else {
-					connpread(pg->c, (void *) (((uintptr_t) addr / PGLEN) * PGLEN + pg->start), pg->len, pg->off);
-					memset((void *) (((uintptr_t) addr / PGLEN) * PGLEN) + pg->start + pg->len, 0, PGLEN - (pg->len + pg->start));
-				}
-				if(!(pe & PGWRITEABLE))
-					pgmap(((uintptr_t) addr / PGLEN) * PGLEN, pe);
-				(printk)(" AoD new PTE: ");
-				(uxprintk)(pe);
-				(cprintk)('\n');
-			} else
-				pgmap(((uintptr_t) addr / PGLEN) * PGLEN, pgemk(pg->p, pg->prot, pg->noshare));
+		pe = (*pt)[(uintptr_t) addr / PGLEN % 1024];
+		(uxprintk)(pe);
+		(cprintk)(' ');
+		if(ensure(((uintptr_t) addr / PGLEN) * PGLEN, err & 0x2 ? PROT_READ | PROT_WRITE : PROT_READ) >= 0)
 			return;
-		}
 	}
 	(cprintk)('\n');
 	dumpregs(r);
@@ -326,10 +346,6 @@ void page_fault(Regs *r, void *addr, uint32_t err)
 		(printk)("-reserved bit set");
 	if(err & 0x10)
 		(printk)("-on execute");
-	(printk)("-at 0x");
-	(uxprintk)(r->cs);
-	(cprintk)(':');
-	(uxprintk)(r->eip);
 	if(addr < (void *) 4096)
 		(printk)("-null pointer dereference");
 	(printk)("-PDE 0x");

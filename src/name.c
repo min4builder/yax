@@ -99,8 +99,9 @@ Conn *vfsgetfid(const char *name, int nolastwalk)
 	Mount *mount = 0;
 	Conn *m = 0, *prevm = 0;
 	char *newname = nameclean(name);
+	const char *tmp;
 	Str *sname = strmk(newname);
-	int err;
+	long long err;
 	name = newname + 1; /* skip initial / */
 	printk("[getfid ");
 	printk(newname);
@@ -123,11 +124,12 @@ Conn *vfsgetfid(const char *name, int nolastwalk)
 			err = PTR2ERR(m);
 			goto bail;
 		}
-		if(name[0] && !nolastwalk && (err = connwalk(m, name)) < 0) {
+		tmp = name;
+		while(*tmp && *tmp != '/') tmp++;
+		if(m && name[0] && !nolastwalk && (err = connfunc(m, MWALK, 0, (char *)name, tmp - name, 0)) < 0) {
 			if(!mount)
 				goto bailclose;
-			if(m)
-				unref(m);
+			unref(m);
 			m = prevm;
 			prevm = 0;
 			continue; /* might be a union mount; retry */
@@ -137,8 +139,7 @@ Conn *vfsgetfid(const char *name, int nolastwalk)
 			prevm = 0;
 			mount = 0;
 		}
-		while(name[0] && name[0] != '/')
-			name++;
+		name = tmp;
 		if(name[0])
 			name++;
 	} while(name[0]);
@@ -152,23 +153,22 @@ bail:
 	if(prevm)
 		unref(prevm);
 	unref(sname);
-	return ERR2PTR(err);
+	return ERR2PTR((int) err);
 }
 
 Conn *vfsopen(const char *name, enum openflags fl, int mode)
 {
 	Conn *c;
 	int err;
-	printk("[open ");
+	printk("[find ");
 	printk(name);
 	printk(" = ");
-	c = vfsgetfid(name, !!(fl & OCREAT));
+	c = vfsgetfid(name, !!(fl & O_CREAT));
 	uxprintk((uintptr_t) c);
 	printk("]\n");
 	if(PTRERR(c))
 		return c;
-	if((err = connopen(c, fl, mode)) < 0) {
-		unref(c);
+	if((err = connfunc(c, MOPEN, fl | (mode << 16), 0, 0, 0)) < 0) {
 		return ERR2PTR(err);
 	}
 	return c;

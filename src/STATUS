@@ -30,10 +30,11 @@ On interrupt:
    - schedule:procswitch
      - the name likely has absolutely nothing to do with the function's function
    - sysentry:_syscall
-     - when sysenter is not supported, it is simulated through this
+     - when the sysenter instruction is not supported, it is emulated through
+       this
 
 The kernel is roughly divided into 4 parts:
- - Mem
+ - Mem (mem/*)
    - phys (ppg)
      - ppgalloc, ppgfree
    - pgdir
@@ -44,6 +45,8 @@ The kernel is roughly divided into 4 parts:
    - usrboundary
      - verusrbuf, verusrstr
      - usrmemget, usrmemmap
+   - user (pmap)
+     - maps physical address to Page structure
    - virt (vpg) (depends on phys and pgdir)
      - vpgkmap, vpgunmap
      - vpgumap, vpgpmap, vpgfmap
@@ -52,7 +55,7 @@ The kernel is roughly divided into 4 parts:
  - Task
    - sysentry
      - usermode
-     - _sysentry (depends on mem)
+     - _sysentry (depends on mem/user)
      - _syscall
      - idle
    - schedule
@@ -67,14 +70,10 @@ The kernel is roughly divided into 4 parts:
      - vfsgetfid
      - vfsmount
      - vfschdir
-       - string ownership issues
    - conn
      - Conn *
-     - connnew, conndup
-     - connopen, connwalk
-     - connread, connwrite, connseek
-     - connpread, connpwrite
-     - connstat, connwstat
+     - conninit, conndup
+     - connfunc
    - iofs (Conn implementation)
      - iofsnew
    - mnt (Conn implementation)
@@ -94,13 +93,12 @@ The kernel is roughly divided into 4 parts:
          - the return address doesn't point to anything interesting
          - argv and envp are single strings; the libc should split them
            according to some convention
-   - libk
    - ssp
+   - str
    - int
    - printk
    - pic
    - pit
-   - port
 
 TODO (in rough order of priority) (also grep TODO *.[ch])
  - hd driver

@@ -78,108 +78,76 @@ static Conn *dup(Conn *c)
 	return c;
 }
 
-static ssize_t read(Conn *c, void *buf, size_t len)
+static long long fn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t off)
 {
-	Pipe *p = (Pipe *) c;
-	size_t endlen;
-	Buf *b = p->b;
-	semwait(&b->filled, 1);
-	if(!p->other)
-		return 0; /* read from closed pipe */
-	ATOMIC(&b->l) {
-		len = MIN(len, b->len);
-		/* this is ok, won't block */
-		semwait(&b->filled, len - 1);
-		endlen = MIN(b->begin + len, BUFLEN) - b->begin;
-		memcpy(buf, &b->buf[b->begin], endlen);
-		memcpy((char *)buf + endlen, b->buf, len - endlen);
-		b->len -= len;
-		b->begin = (b->begin + len) % BUFLEN;
-	}
-	semsignal(&b->empty, len);
-	return len;
-}
-static ssize_t pread(Conn *c, void *buf, size_t len, off_t off)
-{
-	(void) off;
-	return read(c, buf, len);
-}
-static ssize_t write(Conn *c, const void *buf, size_t totallen)
-{
-	Pipe *p = (Pipe *) c;
-	size_t endlen, len = 0;
-	Buf *a = p->a;
-	if(!a)
-		return 0; /* write on closed pipe */
-	while(totallen) {
-		totallen -= len;
-		semwait(&a->empty, 1);
+	switch(fn) {
+	case MSREAD: {
+		Pipe *p = (Pipe *) c;
+		size_t endlen;
+		Buf *b = p->b;
+		semwait(&b->filled, 1);
 		if(!p->other)
-			return 0; /* write on closed pipe */
-		ATOMIC(&a->l) {
-			len = MIN(totallen, BUFLEN - a->len);
+			return 0; /* read from closed pipe */
+		ATOMIC(&b->l) {
+			len = MIN(len, b->len);
 			/* this is ok, won't block */
-			semwait(&a->empty, len - 1);
-			endlen = MIN((a->begin + a->len) % BUFLEN + len, BUFLEN) - (a->begin + a->len) % BUFLEN;
-			memcpy(&a->buf[(a->begin + a->len) % BUFLEN], buf, endlen);
-			memcpy(a->buf, (char *)buf + endlen, len - endlen);
-			a->len += len;
+			semwait(&b->filled, len - 1);
+			endlen = MIN(b->begin + len, BUFLEN) - b->begin;
+			memcpy(buf, &b->buf[b->begin], endlen);
+			memcpy((char *)buf + endlen, b->buf, len - endlen);
+			b->len -= len;
+			b->begin = (b->begin + len) % BUFLEN;
 		}
-		semsignal(&a->filled, len);
-		buf = (char *)buf + len;
+		semsignal(&b->empty, len);
+		return len;
 	}
-	return len;
-}
-static ssize_t pwrite(Conn *c, const void *buf, size_t len, off_t off)
-{
+	case MSWRITE: {
+		Pipe *p = (Pipe *) c;
+		size_t endlen, clen = 0;
+		Buf *a = p->a;
+		if(!a)
+			return 0; /* write on closed pipe */
+		while(len) {
+			len -= clen;
+			semwait(&a->empty, 1);
+			if(!p->other)
+				return 0; /* write on closed pipe */
+			ATOMIC(&a->l) {
+				clen = MIN(len, BUFLEN - a->len);
+				/* this is ok, won't block */
+				semwait(&a->empty, clen - 1);
+				endlen = MIN((a->begin + a->len) % BUFLEN + clen, BUFLEN) - (a->begin + a->len) % BUFLEN;
+				memcpy(&a->buf[(a->begin + a->len) % BUFLEN], buf, endlen);
+				memcpy(a->buf, (char *)buf + endlen, clen - endlen);
+				a->len += clen;
+			}
+			semsignal(&a->filled, clen);
+			buf = (char *)buf + clen;
+		}
+		return clen;
+	}
+	case MSTAT: {
+		Dir d = { { 0x44, 0, 0 }, 0x44000180, 0, 0, 0, "", "", "", "" };
+		d.qid = c->qid;
+		if(((Pipe *) c)->b)
+			d.length = ((Pipe *) c)->b->len;
+		return convD2M(&d, buf, len);
+	}
+	case MOPEN: {
+		if(submsg & (O_EXCL | O_TRUNC))
+			return -EACCES;
+		return 0;
+	}
+	default:
+		return -EINVAL;
+	}
 	(void) off;
-	return write(c, buf, len);
-}
-
-static off_t seek(Conn *c, off_t off, int whence)
-{
-	(void) c, (void) off, (void) whence;
-	return -ESPIPE;
-}
-
-static ssize_t stat(Conn *c, void *buf, size_t len)
-{
-	Dir d = { { 0x44, 0, 0 }, 0x44000180, 0, 0, 0, "", "", "", "" };
-	d.qid = c->qid;
-	if(((Pipe *) c)->b)
-		d.length = ((Pipe *) c)->b->len;
-	return convD2M(&d, buf, len);
-}
-static ssize_t wstat(Conn *c, const void *buf, size_t len)
-{
-	(void) c, (void) buf, (void) len;
-	return -1;
-}
-
-static int walk(Conn *c, const char *path)
-{
-	(void) c, (void) path;
-	return -1;
-}
-static int open(Conn *c, int flags, int mode)
-{
-	if(flags & (OEXCL | OTRUNC))
-		return -1;
-	(void) c, (void) mode;
-	return 0;
 }
 
 static Dev dev = {
+	MIMPL(MSREAD) | MIMPL(MSWRITE) | MIMPL(MSTAT) | MIMPL(MOPEN),
 	del,
 	dup,
-	pread,
-	read,
-	pwrite,
-	write,
-	seek,
-	stat,
-	wstat,
-	walk,
-	open
+	fn
 };
 

@@ -18,41 +18,23 @@ global %1:function (%1.end - %1)
 
 sys _exits, 0
 sys rfork, 1
-sys exec, 2
-
-sys mkmnt, 3
-
-sys mmap, 4
-sys munmap, 5
-
-sys notify, 6
-sys ioperm, 7
-sys noted, 8
-
-sys sleep, 9
-sys alarm, 10
-
-sys open, 11
-sys close, 12
-
-sys pread, 13
-sys pwrite, 14
-sys read, 15
-sys write, 16
-
-sys lseek, 17
-sys dup2, 18
-;sys poll, 19
-sys chdir, 20
-
-sys pipe, 21
-sys __mountfd, 22;sys mount, 22
-sys fd2path, 23
-
-;sys stat, 24
-sys fstat, 25
-;sys wstat, 26
-sys fwstat, 27
-
-sys __getprintk, 28
+sys notify, 2
+sys noted, 3
+sys alarm, 4
+sys sleep, 5
+sys exec, 6
+sys mmap, 7
+sys munmap, 8
+sys mkmnt, 9
+sys pipe, 10
+sys dup2, 11
+sys open, 12
+sys func, 13
+;sys poll, 14
+sys close, 15
+sys __mountfd, 16;sys mount, 16
+sys fd2path, 17
+sys chdir, 18
+sys ioperm, 19
+sys __getprintk, 20
 

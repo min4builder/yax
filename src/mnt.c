@@ -1,6 +1,6 @@
 #define __YAX__
 #include <string.h>
-#include <yax/bit.h>
+#include <sys/bit.h>
 #include <yax/openflags.h>
 #include "conn.h"
 #include "mem/malloc.h"
@@ -9,42 +9,20 @@
 #include "multitask.h"
 #include "stat.h"
 
+/* TODO gather supported messages */
+
 typedef struct Msg Msg;
 struct Msg {
 	Msg *next;
 	Sem done;
-	enum { MSGDEL, MSGDUP, MSGPREAD, MSGREAD, MSGPWRITE, MSGWRITE, MSGSEEK, MSGSTAT, MSGWSTAT, MSGWALK, MSGOPEN } fn;
+	int fn;
+	int submsg;
 	int fid;
-	union {
-		struct {
-			PgList *pl;
-			void *buf;
-			size_t len;
-			off_t off;
-		} rw;
-		struct {
-			off_t off;
-			int whence;
-		} seek;
-		struct {
-			PgList *pl;
-			void *buf;
-			size_t len;
-		} stat;
-		struct {
-			int fl;
-			int mode;
-		} open;
-		struct {
-			char *path;
-		} walk;
-	} u;
-	union {
-		int iret;
-		ssize_t sret;
-		off_t oret;
-		Qid qret;
-	} r;
+	PgList *pl;
+	void *buf;
+	size_t len;
+	off_t off;
+	long long ret;
 };
 
 typedef struct {
@@ -101,287 +79,110 @@ static Conn *sdup(Conn *c)
 	return c;
 }
 
-static ssize_t sread(Conn *c, void *buf_, size_t len)
+static long long sfn(Conn *c, int fn, int submsg, void *buf_, size_t len, off_t off)
 {
-	/* TODO handle partial messages */
-	Server *s = (Server *) c;
-	uint8_t *buf = buf_;
-	condsignal(&s->ready);
-	condwait(&s->hasmsg);
-	if(len < 1)
-		return 0;
-	if(s->read == 0 && len >= 1) {
-		PBIT8(buf, s->msg->fn);
-		buf++, len--;
-		s->read++;
-	}
-	if(s->read == 1 && len >= 4) {
-		PBIT32(buf, s->msg->fid);
-		buf += 4, len -= 4;
-		s->read += 4;
-	}
-	switch(s->msg->fn) {
-	case MSGDEL:
-		if(s->read == 5) {
-			s->read = 0;
-			s->msg->next = s->msgs;
-			s->msgs = s->msg;
-			return 5;
-		}
-		return s->read;
-	case MSGDUP:
-		if(s->read == 5) {
-			s->read = 0;
-			s->msg->next = s->msgs;
-			s->msgs = s->msg;
-			return 5;
-		}
-		return s->read;
-	case MSGPREAD:
-	case MSGPWRITE: {
-		int p = 1;
-		if(0) {
-	case MSGREAD:
-	case MSGWRITE:
-			p = 0;
-		}
-		s->msg->u.rw.buf = putusrptr(s->msg->u.rw.pl);
-		if(s->read == 5 && len >= 4) { 
-			PBIT32(buf, s->msg->u.rw.len);
+	switch(fn) {
+	case MSREAD: {
+		Server *s = (Server *) c;
+		uint8_t *buf = buf_;
+		size_t msgpos = 0;
+		condsignal(&s->ready);
+		condwait(&s->hasmsg);
+		if(s->read == msgpos && len >= 4) {
+			PBIT32(buf, s->msg->fn);
 			buf += 4, len -= 4;
 			s->read += 4;
 		}
-		if(s->read == 9 && len >= PTRLEN / 8) {
-			PBITPTR(buf, s->msg->u.rw.buf);
-			buf += PTRLEN / 8, len -= PTRLEN / 8;
-			s->read += PTRLEN / 8;
-		}
-		if(p && s->read == 9 + PTRLEN / 8 && len >= 8) {
-			PBIT64(buf, s->msg->u.rw.off);
-			buf += 8, len -= 8;
-			s->read += 8;
-		}
-		if(s->read == (p ? 17 : 9) + PTRLEN / 8) {
-			s->read = 0;
-			s->msg->next = s->msgs;
-			s->msgs = s->msg;
-			return (p ? 17 : 9) + PTRLEN / 8;
-		}
-		return s->read;
-	}
-	case MSGSEEK:
-		if(s->read == 5 && len >= 8) {
-			PBIT64(buf, s->msg->u.seek.off);
-			buf += 8, len -= 8;
-			s->read += 8;
-		}
-		if(s->read == 13 && len >= 1) {
-			*buf = s->msg->u.seek.whence;
-			buf++, len--;
-			s->read++;
-		}
-		if(s->read == 14) {
-			s->read = 0;
-			s->msg->next = s->msgs;
-			s->msgs = s->msg;
-			return 14;
-		}
-		return s->read;
-	case MSGSTAT:
-	case MSGWSTAT:
-		if(s->read == 5 && len >= 4) {
-			PBIT32(buf, s->msg->u.stat.len);
+		msgpos += 4;
+		if(s->read == msgpos && len >= 4) {
+			PBIT32(buf, s->msg->fid);
 			buf += 4, len -= 4;
 			s->read += 4;
 		}
-		if(s->read == 9 && len >= PTRLEN / 8) {
-			s->msg->u.stat.buf = putusrptr(s->msg->u.stat.pl);
-			PBITPTR(buf, s->msg->u.stat.buf);
-			buf += PTRLEN / 8, len -= PTRLEN / 8;
-			s->read += PTRLEN / 8;
-		}
-		if(s->read == 9 + PTRLEN / 8) {
-			s->read = 0;
-			s->msg->next = s->msgs;
-			s->msgs = s->msg;
-			return 9 + PTRLEN / 8;
-		}
-		return s->read;
-	case MSGWALK: {
-		size_t sl = strlen(s->msg->u.walk.path);
-		if(s->read == 5 && len >= 4) {
-			PBIT32(buf, sl);
+		msgpos += 4;
+		if(s->read == msgpos && len >= 1) {
+			PBIT32(buf, s->msg->submsg);
 			buf += 4, len -= 4;
 			s->read += 4;
 		}
-		if(s->read == 9 && len >= sl) {
-			memcpy(buf, s->msg->u.walk.path, sl);
-			buf += sl, len -= sl;
-			s->read += sl;
-		}
-		if(s->read == 9 + sl) {
-			s->read = 0;
-			s->msg->next = s->msgs;
-			s->msgs = s->msg;
-			return 9 + sl;
-		}
-		return s->read;
-	}
-	case MSGOPEN:
-		if(s->read == 5 && len >= 4) {
-			PBIT32(buf, s->msg->u.open.fl);
-			buf += 4, len -= 4;
-			s->read += 4;
-		}
-		if(s->msg->u.open.fl & OCREAT) {
-			if(s->read == 9 && len >= 4) {
-				PBIT32(buf, s->msg->u.open.mode);
+		msgpos += 4;
+		if(s->msg->fn & MWANTSPTR) {
+			if(s->read == msgpos && len >= 4) { 
+				PBIT32(buf, s->msg->len);
 				buf += 4, len -= 4;
 				s->read += 4;
 			}
-			if(s->read == 13) {
-				s->read = 0;
-				s->msg->next = s->msgs;
-				s->msgs = s->msg;
-				return 13;
+			msgpos += 4;
+			if(s->read == msgpos && len >= PTRLEN / 8) {
+				s->msg->buf = putusrptr(s->msg->pl);
+				PBITPTR(buf, s->msg->buf);
+				buf += PTRLEN / 8, len -= PTRLEN / 8;
+				s->read += PTRLEN / 8;
 			}
-			return s->read;
+			msgpos += PTRLEN / 8;
 		}
-		if(s->read == 9) {
+		if(s->msg->fn & MWANTSOFF) {
+			if(s->read == msgpos && len >= 8) {
+				PBIT64(buf, s->msg->off);
+				buf += 8, len -= 8;
+				s->read += 8;
+			}
+			msgpos += 8;
+		}
+		if(s->read == msgpos) {
 			s->read = 0;
 			s->msg->next = s->msgs;
 			s->msgs = s->msg;
-			return 9;
 		}
-		return s->read;
-	default:
-		return -1;
+		return s->read ? s->read : msgpos;
 	}
-}
-static ssize_t spread(Conn *c, void *buf, size_t len, off_t off)
-{
-	(void) off;
-	return sread(c, buf, len);
-}
-
-static ssize_t swrite(Conn *c, const void *buf_, size_t len)
-{
-	Server *s = (Server *) c;
-	Msg **msg, *m;
-	const uint8_t *buf = buf_;
-	int fid;
-	if(len < 4)
-		return 0;
-	fid = GBIT32(buf);
-	for(msg = &s->msgs; *msg && (*msg)->fid != fid; msg = &(*msg)->next) {}
-	if(!*msg)
-		return -1;
-	m = *msg;
-	*msg = m->next;
-	switch(m->fn) {
-	case MSGDEL:
-		if(len != 4)
-			return 0;
-		break;
-	case MSGDUP:
-		if(len != 8)
-			return 0;
-		m->r.iret = GBIT32(buf + 4);
-		break;
-	case MSGPREAD:
-	case MSGPWRITE:
-	case MSGREAD:
-	case MSGWRITE:
-		if(len != 8)
-			return 0;
-		freeusrptr(m->u.rw.pl, m->u.rw.buf);
-		m->r.sret = GBIT32(buf + 4);
-		break;
-	case MSGSEEK:
+	case MSWRITE: {
+		Server *s = (Server *) c;
+		Msg **msg, *m;
+		const uint8_t *buf = buf_;
+		int fid;
 		if(len != 12)
-			return 0;
-		m->r.oret = GBIT64(buf + 4);
-		break;
-	case MSGSTAT:
-	case MSGWSTAT:
-		if(len != 8)
-			return 0;
-		m->r.sret = GBIT32(buf + 4);
-		break;
-	case MSGWALK:
-		if(len != 17)
-			return 0;
-		m->r.qret.type = GBIT8(buf + 4);
-		m->r.qret.path = GBIT64(buf + 5);
-		m->r.qret.vers = GBIT32(buf + 13);
-		break;
-	case MSGOPEN:
-		if(len != 8)
-			return 0;
-		m->r.iret = GBIT32(buf + 4);
-		break;
-	default:
-		return -1;
+			return -EINVAL;
+		fid = GBIT32(buf);
+		for(msg = &s->msgs; *msg && (*msg)->fid != fid; msg = &(*msg)->next) {}
+		if(!*msg)
+			return -EINVAL;
+		m = *msg;
+		*msg = m->next;
+		m->ret = GBIT64(buf + 4);
+		if(m->fn & MWANTSPTR)
+			freeusrptr(m->pl, m->buf);
+		condsignal(&m->done);
+		return len;
 	}
-	condsignal(&m->done);
-	return len;
-}
-static ssize_t spwrite(Conn *c, const void *buf, size_t len, off_t off)
-{
+	case MSTAT: {
+		Dir d = { { 0x44, 0, 0 }, 0x44000180, 0, 0, 0, "", "", "", "" };
+		return convD2M(&d, buf_, len);
+	}
+	case MOPEN: {
+		if(submsg & (O_EXCL | O_TRUNC))
+			return -1;
+		return 0;
+	}
+	default:
+		return -EINVAL;
+	}
 	(void) off;
-	return swrite(c, buf, len);
-}
-
-static off_t sseek(Conn *c, off_t off, int whence)
-{
-	(void) c, (void) off, (void) whence;
-	return -ESPIPE;
-}
-
-static ssize_t sstat(Conn *c, void *buf, size_t len)
-{
-	Dir d = { { 0x44, 0, 0 }, 0x44000180, 0, 0, 0, "", "", "", "" };
-	(void) c;
-	return convD2M(&d, buf, len);
-}
-static ssize_t swstat(Conn *c, const void *buf, size_t len)
-{
-	(void) c, (void) buf, (void) len;
-	return -1;
-}
-
-static int swalk(Conn *c, const char *path)
-{
-	(void) c, (void) path;
-	return -1;
-}
-static int sopen(Conn *c, int fl, int mode)
-{
-	if(fl & (OEXCL | OTRUNC))
-		return -1;
-	(void) c, (void) mode;
-	return 0;
 }
 
 static Dev sops = {
+	MIMPL(MSREAD) | MIMPL(MSWRITE) | MIMPL(MSTAT) | MIMPL(MOPEN),
 	sdel,
 	sdup,
-	spread,
-	sread,
-	spwrite,
-	swrite,
-	sseek,
-	sstat,
-	swstat,
-	swalk,
-	sopen
+	sfn
 };
+
+static long long cfn(Conn *, int, int, void *, size_t, off_t);
 
 static void cdel(Conn *c_)
 {
 	Client *c = (Client *) c_;
-	c->msg.fn = MSGDEL;
-	sendmsg(c->s, &c->msg);
+	cfn(c_, MDEL, 0, 0, 0, 0);
 	unref(c->s);
 	free(c);
 }
@@ -392,137 +193,37 @@ static Conn *cdup(Conn *c_)
 	conninit((Conn *)newc, "", c->c.qid, &cops, c->s);
 	newc->s = c->s;
 	ref(newc->s);
-	c->msg.fn = MSGDUP;
-	c->msg.fid = c->fid;
-	sendmsg(c->s, &c->msg);
-	newc->fid = c->msg.r.iret;
+	newc->fid = cfn(c_, MDUP, 0, 0, 0, 0);
 	/* TODO handle errors */
 	return (Conn *) newc;
 }
 
-static ssize_t cpread(Conn *c_, void *buf, size_t len, off_t off)
+static long long cfn(Conn *c_, int mesg, int sub, void *buf, size_t len, off_t off)
 {
 	Client *c = (Client *) c_;
-	seminit(&c->msg.done, 0);
-	c->msg.fn = MSGPREAD;
 	c->msg.fid = c->fid;
-	c->msg.u.rw.pl = getusrptr(buf, len);
-	c->msg.u.rw.off = off;
-	c->msg.u.rw.len = len;
+	c->msg.fn = mesg;
+	c->msg.submsg = sub;
+	if(mesg & MWANTSPTR) {
+		c->msg.pl = getusrptr(buf, len);
+		c->msg.len = len;
+	} else {
+		c->msg.pl = c->msg.buf = 0;
+		c->msg.len = 0;
+	}
+	c->msg.off = mesg & MWANTSOFF ? off : 0;
 	sendmsg(c->s, &c->msg);
-	return c->msg.r.sret;
-}
-static ssize_t cread(Conn *c_, void *buf, size_t len)
-{
-	Client *c = (Client *) c_;
-	seminit(&c->msg.done, 0);
-	c->msg.fn = MSGREAD;
-	c->msg.fid = c->fid;
-	c->msg.u.rw.pl = getusrptr(buf, len);
-	c->msg.u.rw.off = 0;
-	c->msg.u.rw.len = len;
-	sendmsg(c->s, &c->msg);
-	return c->msg.r.sret;
-}
-static ssize_t cpwrite(Conn *c_, const void *buf, size_t len, off_t off)
-{
-	Client *c = (Client *) c_;
-	seminit(&c->msg.done, 0);
-	c->msg.fn = MSGPWRITE;
-	c->msg.fid = c->fid;
-	c->msg.u.rw.pl = getusrptr(buf, len);
-	c->msg.u.rw.off = off;
-	c->msg.u.rw.len = len;
-	sendmsg(c->s, &c->msg);
-	return c->msg.r.sret;
-}
-static ssize_t cwrite(Conn *c_, const void *buf, size_t len)
-{
-	Client *c = (Client *) c_;
-	seminit(&c->msg.done, 0);
-	c->msg.fn = MSGWRITE;
-	c->msg.fid = c->fid;
-	c->msg.u.rw.pl = getusrptr(buf, len);
-	c->msg.u.rw.off = 0;
-	c->msg.u.rw.len = len;
-	sendmsg(c->s, &c->msg);
-	return c->msg.r.sret;
-}
-
-static off_t cseek(Conn *c_, off_t off, int whence)
-{
-	Client *c = (Client *) c_;
-	seminit(&c->msg.done, 0);
-	c->msg.fn = MSGSEEK;
-	c->msg.fid = c->fid;
-	c->msg.u.seek.off = off;
-	c->msg.u.seek.whence = whence;
-	sendmsg(c->s, &c->msg);
-	return c->msg.r.oret;
-}
-
-static ssize_t cstat(Conn *c_, void *buf, size_t len)
-{
-	Client *c = (Client *) c_;
-	seminit(&c->msg.done, 0);
-	c->msg.fn = MSGSTAT;
-	c->msg.fid = c->fid;
-	c->msg.u.stat.pl = getusrptr(buf, len);
-	c->msg.u.stat.len = len;
-	sendmsg(c->s, &c->msg);
-	return c->msg.r.sret;
-}
-static ssize_t cwstat(Conn *c_, const void *buf, size_t len)
-{
-	Client *c = (Client *) c_;
-	seminit(&c->msg.done, 0);
-	c->msg.fn = MSGWSTAT;
-	c->msg.fid = c->fid;
-	c->msg.u.stat.pl = getusrptr(buf, len);
-	c->msg.u.stat.len = len;
-	sendmsg(c->s, &c->msg);
-	return c->msg.r.sret;
-}
-
-static int cwalk(Conn *c_, const char *path)
-{
-	Client *c = (Client *) c_;
-	const char *pw;
-	seminit(&c->msg.done, 0);
-	c->msg.fn = MSGWALK;
-	c->msg.fid = c->fid;
-	for(pw = path; *pw && *pw != '/'; pw++) {}
-	c->msg.u.walk.path = malloc(pw - path + 1);
-	memcpy(c->msg.u.walk.path, path, pw - path);
-	c->msg.u.walk.path[pw - path] = '\0';
-	sendmsg(c->s, &c->msg);
-	free(c->msg.u.walk.path);
-	c_->qid = c->msg.r.qret;
-	return c_->qid.type == 0xFF ? (int) c_->qid.path : 0;
-}
-static int copen(Conn *c_, int fl, int mode)
-{
-	Client *c = (Client *) c_;
-	seminit(&c->msg.done, 0);
-	c->msg.fn = MSGOPEN;
-	c->msg.fid = c->fid;
-	c->msg.u.open.fl = fl;
-	c->msg.u.open.mode = mode;
-	sendmsg(c->s, &c->msg);
-	return c->msg.r.iret;
+	if(mesg & MWANTSPTR)
+		unref(c->msg.pl);
+	if(mesg == MWALK && c->msg.ret >= 0) /* FIXME */
+		c_->qid.path = c->msg.ret;
+	return c->msg.ret;
 }
 
 static Dev cops = {
+	MIMPLALL,
 	cdel,
 	cdup,
-	cpread,
-	cread,
-	cpwrite,
-	cwrite,
-	cseek,
-	cstat,
-	cwstat,
-	cwalk,
-	copen
+	cfn
 };
 

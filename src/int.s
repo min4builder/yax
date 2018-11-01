@@ -31,7 +31,7 @@ intoff:
 	pushf
 	cli
 	pop eax
-	and eax, ~0x200 ; old IF
+	and eax, 0x200 ; old IF
 	ret
 .end:
 inttest:
@@ -92,8 +92,8 @@ int6:
 	mov ax, [eax]
 	cmp ax, 0x340f ; SYSENTER
 	je .sysenter
-	cmp ax, 0x0b0f ; UD2
-	je .sysenter
+	;cmp ax, 0x0b0f ; UD2
+	;je .sysenter
 	push dword 0
 	push dword 6
 	lea eax, [esp+8]

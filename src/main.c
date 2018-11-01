@@ -24,7 +24,9 @@ void dumpregs(Regs *);
 
 void dumpregs(Regs *r)
 {
-	printk("eax=0x");
+	printk("eip=0x");
+	uxprintk(r->eip);
+	printk(" eax=0x");
 	uxprintk(r->eax);
 	printk(" ebx=0x");
 	uxprintk(r->ebx);
@@ -40,6 +42,18 @@ void dumpregs(Regs *r)
 	uxprintk(r->ebp);
 	printk(" esp=0x");
 	uxprintk(r->esp);
+	printk(" cs=0x");
+	uxprintk(r->cs);
+	printk(" ds=0x");
+	uxprintk(r->ds);
+	printk(" es=0x");
+	uxprintk(r->es);
+	printk(" fs=0x");
+	uxprintk(r->fs);
+	printk(" gs=0x");
+	uxprintk(r->gs);
+	printk(" ss=0x");
+	uxprintk(r->ss);
 	cprintk('\n');
 }
 
@@ -47,22 +61,30 @@ void int_handler(Regs *r, uint8_t n, uint32_t err)
 {
 	if(n >= 0x20 && n < 0x30) {
 		iofsinterrupt(n - 0x20);
-	} else if(n == 8) {
+		return;
+	}
+	if(n == 8) {
 		dumpregs(r);
 		printk("Double fault!\n");
 		printk("IDK what to do! PANIC!!!!\n");
 		halt();
+	} else if(n == 6) {
+		dumpregs(r);
+		printk("Invalid instruction\n");
+		halt();
 	}
 	if(n == 13) {
 		dumpregs(r);
-		printk("General protection fault at ");
-		uxprintk(r->cs);
-		cprintk(':');
-		uxprintk(r->eip);
-		cprintk('\n');
+		printk("General protection fault\n");
 		halt();
 	}
-	(void) err;
+	dumpregs(r);
+	printk("Exception ");
+	iprintk(n);
+	printk(" err=");
+	uxprintk(err);
+	cprintk('\n');
+	halt();
 }
 
 void kernel_main(MultibootInfo *mbinfo)

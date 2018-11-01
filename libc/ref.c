@@ -20,8 +20,10 @@ void (unref)(const RefCounted *rc)
 {
 	ATOMIC(&((RefCounted *) rc)->l) {
 		((RefCounted *) rc)->refcnt--;
-		if(((RefCounted *)rc)->refcnt <= 0)
+		if(rc->refcnt == 0)
 			rc->free(rc);
+		else if(rc->refcnt < 0)
+			{(void) *(volatile int *)0;}
 	}
 }
 
