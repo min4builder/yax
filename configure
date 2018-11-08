@@ -6,7 +6,7 @@ quote() {
 
 exec 3>config.sh
 
-echo >&3 "YAX_PREFIX=$(quote "$PWD/sysroot")"
-echo >&3 "PATH=\"\$YAX_PREFIX/bin:\${PATH#\$YAX_PREFIX/bin:}\""
-echo >&3 "YAX_ARCH=i686"
+echo >&3 "export YAX_PREFIX=$(quote "$PWD/sysroot")"
+echo >&3 "export PATH=\"\$YAX_PREFIX/bin:\${PATH#\$YAX_PREFIX/bin:}\""
+echo >&3 "export YAX_ARCH=i686"
 

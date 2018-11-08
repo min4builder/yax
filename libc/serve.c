@@ -1,9 +1,9 @@
-#define __YAX__
+#define _POSIX_SOURCE
 #include <stdlib.h>
 #include <string.h>
-#include <sys/bit.h>
-#include <sys/serve.h>
 #include <unistd.h>
+#include <codas/bit.h>
+#include <yax/serve.h>
 
 Req recv(int fd)
 {

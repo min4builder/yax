@@ -1,8 +1,8 @@
 #ifndef _MEM_USER_H
 #define _MEM_USER_H
 
-#include <sys/ref.h>
 #include <sys/types.h>
+#include <codas/ref.h>
 #include <yax/mapflags.h>
 #include "conn.h"
 

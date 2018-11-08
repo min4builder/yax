@@ -1,8 +1,8 @@
 #define NDEBUG
 #define __YAX__
 #include <string.h>
-#include <sys/ref.h>
 #include <sys/types.h>
+#include <codas/ref.h>
 #include <yax/mapflags.h>
 #include "mem/pgdir.h"
 #include "mem/phys.h"

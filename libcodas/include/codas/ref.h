@@ -1,14 +1,9 @@
-#include <_yalc.h>
-
-#if !defined(_SYS_REF_H) && defined(_YALC_NEED_YAX)
-#define _SYS_REF_H
-
-#include <sys/lock.h>
+#ifndef CODAS_REF_H_
+#define CODAS_REF_H_
 
 typedef struct RefCounted RefCounted;
 struct RefCounted {
-	int refcnt;
-	Lock l;
+	_Atomic int refcnt;
 	void (*free)(const RefCounted *);
 };
 
@@ -21,5 +16,5 @@ void unref(const RefCounted *);
 #define ref(x) ref((const RefCounted *) (x))
 #define unref(x) unref((const RefCounted *) (x))
 
-#endif /* _SYS_REF_H */
+#endif /* CODAS_REF_H_ */
 

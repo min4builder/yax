@@ -1,14 +1,14 @@
-SUBDIRS=libc drivers initrd src
+SUBDIRS=libc libcodas drivers initrd src
 
 all:
 	./install-headers.sh
-	for i in $(SUBDIRS); do cd "$$i"; $(MAKE) $@; cd ..; done
+	set -e; for i in $(SUBDIRS); do cd "$$i"; $(MAKE) $@; cd ..; done
 test: all
-	cd src; $(MAKE) $@
+	cd src && $(MAKE) $@
 debug: all
-	cd src; $(MAKE) $@
+	cd src && $(MAKE) $@
 clean:
-	for i in $(SUBDIRS); do cd "$$i"; $(MAKE) $@; cd ..; done
+	set -e; for i in $(SUBDIRS); do cd "$$i"; $(MAKE) $@; cd ..; done
 
 src: libc libc/libk.a
 initrd: drivers libc libc/libc.a

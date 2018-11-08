@@ -1,7 +1,7 @@
 include ../config.mk
 
-LIBK_OBJS=itoa.o lock.o memcmp.o memmove.o memset.o port.o ref.o strcat.o \
-	strcmp.o strcpy.o strlcpy.o strlen.o strncmp.o
+LIBK_OBJS=itoa.o lock.o memcmp.o memmove.o memset.o port.o strcat.o strcmp.o \
+	strcpy.o strlcpy.o strlen.o strncmp.o
 
 OBJS:=_libc_main.o _exit.o abort.o assert.o environ.o errno.o execve.o exit.o \
 	exits.o fork.o liballoc.o read.o serve.o syscall.o write.o $(LIBK_OBJS)
@@ -27,10 +27,10 @@ $(LIBINSTALL)/libk.a: libk.a
 	cp libk.a $(LIBINSTALL)/libk.a
 
 libc.a: $(OBJS)
-	$(AR) -o $@ $(OBJS)
+	$(AR) $@ $(OBJS)
 
 libk.a: $(LIBK_OBJS)
-	$(AR) -o $@ $(LIBK_OBJS)
+	$(AR) $@ $(LIBK_OBJS)
 
 clean:
 	rm -f *.o *.a

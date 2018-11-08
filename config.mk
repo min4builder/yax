@@ -1,7 +1,7 @@
-#CC=cparser -target i686-yax
-CC=i686-yax-gcc
+#CC=cparser -target $(YAX_ARCH)-yax
+CC=$(YAX_ARCH)-yax-gcc
 LD=$(CC)
-AR=i686-yax-ar crs
+AR=$(YAX_ARCH)-yax-ar crs
 ASM=nasm -felf32 -g
 CFLAGS=-g -O3 -Wall -Wextra -Werror -Wno-error=switch -Wno-error=enum-compare
 LDFLAGS=

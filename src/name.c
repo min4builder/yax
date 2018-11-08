@@ -1,7 +1,7 @@
 #define NDEBUG
 #define __YAX__
 #include <string.h>
-#include <sys/ref.h>
+#include <codas/ref.h>
 #include <yax/mountflags.h>
 #include <yax/openflags.h>
 #include "fds.h"

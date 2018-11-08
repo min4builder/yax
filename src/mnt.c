@@ -1,6 +1,6 @@
 #define __YAX__
 #include <string.h>
-#include <sys/bit.h>
+#include <codas/bit.h>
 #include <yax/openflags.h>
 #include "conn.h"
 #include "mem/malloc.h"

@@ -2,8 +2,8 @@
 #define _CONN_H
 
 #include <sys/lock.h>
-#include <sys/ref.h>
 #include <sys/types.h>
+#include <codas/ref.h>
 #include "mem/str.h"
 #include "stat.h"
 

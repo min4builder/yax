@@ -1,8 +1,8 @@
 #ifndef _FDS_H
 #define _FDS_H
 
-#include <sys/ref.h>
 #include <sys/types.h>
+#include <codas/ref.h>
 #include "conn.h"
 
 typedef struct {

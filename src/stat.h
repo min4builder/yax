@@ -2,8 +2,8 @@
 #define _STAT_H
 
 #include <stdint.h>
-#include <sys/macro.h>
 #include <sys/types.h>
+#include <codas/macro.h>
 #include <yax/stat.h>
 #include "arch.h"
 

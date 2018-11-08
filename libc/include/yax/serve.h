@@ -1,9 +1,8 @@
-#ifndef _SERVE_H
-#define _SERVE_H
+#ifndef YAX_SERVE_H_
+#define YAX_SERVE_H_
 
 #include <sys/types.h>
 #include <yax/fn.h>
-#include <yax/stat.h>
 
 typedef struct {
 	int fn;
@@ -18,5 +17,5 @@ typedef struct {
 Req recv(int fd);
 void answer(Req m, int fd);
 
-#endif /* _SERVE_H */
+#endif /* YAX_SERVE_H_ */
 

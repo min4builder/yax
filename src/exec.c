@@ -2,8 +2,8 @@
 #define __YAX__
 #include <stdint.h>
 #include <string.h>
-#include <sys/bit.h>
 #include <sys/types.h>
+#include <codas/bit.h>
 #include <yax/errorcodes.h>
 #include "arch.h"
 #include "boot.h"

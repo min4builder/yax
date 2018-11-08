@@ -3,7 +3,7 @@
 #if !defined(_SYS_LOCK_H) && defined(_YALC_NEED_YAX)
 #define _SYS_LOCK_H
 
-#include <sys/macro.h>
+#include <codas/macro.h>
 
 /* atomic spinlocks */
 typedef int Lock;

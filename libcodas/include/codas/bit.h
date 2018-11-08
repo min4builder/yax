@@ -1,7 +1,5 @@
-#include <_yalc.h>
-
-#if !defined(_SYS_BIT_H) && defined(_YALC_NEED_YAX)
-#define _SYS_BIT_H
+#ifndef CODAS_BIT_H_
+#define CODAS_BIT_H
 
 #include <stdint.h>
 
@@ -15,5 +13,5 @@
 #define PBIT32(b, v) (PBIT16(b, (v) & 0xFFFF), PBIT16((uint8_t *)(b)+2, (v) >> 16))
 #define PBIT64(b, v) (PBIT32(b, (v) & 0xFFFFFFFF), PBIT32((uint8_t *)(b)+4, (v) >> 32))
 
-#endif /* _SYS_BIT_H */
+#endif /* CODAS_BIT_H_ */
 

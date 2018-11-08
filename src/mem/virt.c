@@ -3,7 +3,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-#include <sys/ref.h>
+#include <codas/ref.h>
 #include <yax/errorcodes.h>
 #include <yax/mapflags.h>
 #include "arch.h"

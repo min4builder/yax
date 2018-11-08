@@ -2,8 +2,8 @@
 #define _MEM_VIRTMMAN_H
 
 #include <stddef.h>
-#include <sys/ref.h>
 #include <sys/types.h>
+#include <codas/ref.h>
 #include <yax/mapflags.h>
 #include "conn.h"
 #include "mem/pgdir.h"

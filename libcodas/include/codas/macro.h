@@ -1,7 +1,5 @@
-#include <_yalc.h>
-
-#if !defined(_SYS_MACRO_H) && defined(_YALC_NEED_YAX)
-#define _SYS_MACRO_H
+#ifndef CODAS_MACRO_H_
+#define CODAS_MACRO_H_
 
 /*
 I wish I could do this:
@@ -26,5 +24,5 @@ I wish I could do this:
 		if(1) goto MACRO_LABEL_(WRAP, 2); \
 		else MACRO_LABEL_(WRAP, 1):
 
-#endif /* _SYS_MACRO_H */
+#endif /* CODAS_MACRO_H_ */
 

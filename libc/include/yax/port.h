@@ -1,9 +1,7 @@
-#include <_yalc.h>
+#ifndef YAX_PORT_H_
+#define YAX_PORT_H_
 
-#if !defined(_PORT_H) && _YALC_NEED_YAX
-#define _PORT_H
-
-_YALCDEFTYPE(size_t);
+#include <sys/types.h>
 
 void outb(size_t port, unsigned char byte);
 void outw(size_t port, unsigned short word);
@@ -16,5 +14,5 @@ void insw(size_t port, size_t len, void *buf);
 void insd(size_t port, size_t len, void *buf);
 void ioperm(size_t, size_t, int);
 
-#endif /* _PORT_H */
+#endif /* YAX_PORT_H_ */
 

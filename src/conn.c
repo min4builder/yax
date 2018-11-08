@@ -2,7 +2,7 @@
 #define __YAX__
 #include <string.h>
 #include <sys/types.h>
-#include <sys/ref.h>
+#include <codas/ref.h>
 #include <yax/openflags.h>
 #include "conn.h"
 #include "mem/malloc.h"

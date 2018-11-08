@@ -1,7 +1,7 @@
 include ../config.mk
 CFLAGS+=-std=c89 -ffreestanding -Wall -Wextra -Werror -Wno-error=parentheses -I$(PWD)
 LDFLAGS=-T linker.ld -nostdlib
-LIBS=-lk
+LIBS=-lcodas -lk
 
 QEMU=-serial stdio -kernel yax.bin -initrd ../initrd/initrd -hda /dev/zero
 

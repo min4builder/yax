@@ -1,8 +1,8 @@
 #define __YAX__
 #include <string.h>
-#include <sys/bit.h>
 #include <sys/lock.h>
 #include <sys/types.h>
+#include <codas/bit.h>
 #include <yax/errorcodes.h>
 #include <yax/openflags.h>
 #include <yax/stat.h>
