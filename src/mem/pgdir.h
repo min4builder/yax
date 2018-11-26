@@ -5,7 +5,7 @@
 #include <yax/mapflags.h>
 #include "boot.h"
 
-enum pgfields {
+enum PgEntry {
 	PGPRESENT = 1 << 0,
 	PGWRITEABLE = 1 << 1,
 	PGUSER = 1 << 2,
@@ -13,6 +13,7 @@ enum pgfields {
 	PGGLOBAL = 1 << 8,
 	PGNOSHARE = 1 << 9,
 	PGCOW = 1 << 10,
+	PGPHYS = 1 << 11,
 	PGADDR = 0xfffff000
 };
 
@@ -30,10 +31,10 @@ enum pgspecial {
 
 #define NOPHYSPG ((uintptr_t) ~0)
 
-typedef uint32_t PgEntry;
+typedef enum PgEntry PgEntry;
 typedef PgEntry PgDir[1024];
 
-PgEntry pgemk(uintptr_t, enum mapprot, int);
+PgEntry pgemk(uintptr_t, enum mapprot, int, int);
 void pgmap(uintptr_t, PgEntry);
 uintptr_t pgunmap(uintptr_t);
 uintptr_t pgfind(size_t, int);

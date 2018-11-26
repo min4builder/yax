@@ -6,8 +6,8 @@
 #include <yax/errorcodes.h>
 #include <yax/openflags.h>
 #include <yax/stat.h>
-#include "conn.h"
-#include "iofs.h"
+#include "fs/conn.h"
+#include "fs/iofs.h"
 #include "mem/malloc.h"
 #include "multitask.h"
 #include "pic.h"
@@ -84,7 +84,7 @@ static ssize_t dirpreadelem(size_t *rlen, size_t *tlen, void **buf, size_t *len,
 	return 1; /* continue */
 }
 
-static long long rfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t off)
+static long long rfn(Conn *c, int fn, int submsg, void *buf, size_t len, void *buf2, size_t len2, off_t off)
 {
 	switch(fn) {
 	case MPREAD: {
@@ -103,13 +103,19 @@ static long long rfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t o
 		return convD2M(&d, buf, len);
 	}
 	case MWALK: {
+		if(len2 != 13)
+			return -EINVAL;
 		if(strncmp(buf, "port", len) == 0) {
 			Qid qid = { 0x84, 1, 0 };
-			c->qid = qid;
+			PBIT8(buf2, qid.type);
+			PBIT32((char *)buf2+1, qid.vers);
+			PBIT64((char *)buf2+4, qid.path);
 			c->dev = &pddev;
 		} else if(strncmp(buf, "irq", len) == 0) {
 			Qid qid = { 0x84, 2, 0 };
-			c->qid = qid;
+			PBIT8(buf2, qid.type);
+			PBIT32((char *)buf2+1, qid.vers);
+			PBIT64((char *)buf2+4, qid.path);
 			c->dev = &iddev;
 		} else
 			return -ENOENT;
@@ -126,13 +132,12 @@ static long long rfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t o
 }
 
 static Dev rdev = {
-	MIMPL(MPREAD) | MIMPL(MSTAT) | MIMPL(MWALK) | MIMPL(MOPEN),
 	del,
 	dirdup,
 	rfn
 };
 
-static long long pdfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t off)
+static long long pdfn(Conn *c, int fn, int submsg, void *buf, size_t len, void *buf2, size_t len2, off_t off)
 {
 	switch(fn) {
 	case MPREAD: {
@@ -164,6 +169,8 @@ static long long pdfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t 
 		const char *path = buf;
 		if(len != 4)
 			return -ENOENT;
+		if(len2 != 13)
+			return -EINVAL;
 
 		if('0' <= path[0] && path[0] <= '9')
 			n += path[0] - '0';
@@ -198,7 +205,9 @@ static long long pdfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t 
 
 		qid.path = 3 + n;
 		((IoConn *) c)->n = n;
-		c->qid = qid;
+		PBIT8(buf2, qid.type);
+		PBIT32((char *)buf2+1, qid.vers);
+		PBIT64((char *)buf2+4, qid.path);
 		c->dev = &pdev;
 		return 0;
 	}
@@ -213,13 +222,12 @@ static long long pdfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t 
 }
 
 static Dev pddev = {
-	MIMPL(MPREAD) | MIMPL(MSTAT) | MIMPL(MWALK) | MIMPL(MOPEN),
 	del,
 	dirdup,
 	pdfn
 };
 
-static long long idfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t off)
+static long long idfn(Conn *c, int fn, int submsg, void *buf, size_t len, void *buf2, size_t len2, off_t off)
 {
 	switch(fn) {
 	case MPREAD: {
@@ -248,15 +256,21 @@ static long long idfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t 
 		const char *path = buf;
 		if(len != 1)
 			return -ENOENT;
+		if(len2 != 13)
+			return -EINVAL;
+
 		if('0' <= path[0] && path[0] <= '9')
 			n = path[0] - '0';
 		else if('a' <= path[0] && path[0] <= 'f')
 			n = path[0] + 10 - 'a';
 		else
 			return -ENOENT;
+
 		qid.path = 0x10003 + n;
 		((IoConn *)c)->n = n;
-		c->qid = qid;
+		PBIT8(buf2, qid.type);
+		PBIT32((char *)buf2+1, qid.vers);
+		PBIT64((char *)buf2+4, qid.path);
 		c->dev = &idev;
 		return 0;
 	}
@@ -271,13 +285,12 @@ static long long idfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t 
 }
 
 static Dev iddev = {
-	MIMPL(MPREAD) | MIMPL(MSTAT) | MIMPL(MWALK) | MIMPL(MOPEN),
 	del,
 	dirdup,
 	idfn
 };
 
-static long long pfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t off)
+static long long pfn(Conn *c, int fn, int submsg, void *buf, size_t len, void *buf2, size_t len2, off_t off)
 {
 	switch(fn) {
 	case MSREAD: {
@@ -318,17 +331,16 @@ static long long pfn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t o
 	default:
 		return -EINVAL;
 	}
-	(void) off;
+	(void) buf2, (void) len2, (void) off;
 }
 
 static Dev pdev = {
-	MIMPL(MSREAD) | MIMPL(MSWRITE) | MIMPL(MSTAT) | MIMPL(MOPEN),
 	del,
 	iodup,
 	pfn
 };
 
-static long long ifn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t off)
+static long long ifn(Conn *c, int fn, int submsg, void *buf, size_t len, void *buf2, size_t len2, off_t off)
 {
 	switch(fn) {
 	case MSREAD: {
@@ -357,11 +369,10 @@ static long long ifn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t o
 	default:
 		return -EINVAL;
 	}
-	(void) off;
+	(void) buf2, (void) len2, (void) off;
 }
 
 static Dev idev = {
-	MIMPL(MSREAD) | MIMPL(MSTAT) | MIMPL(MOPEN),
 	del,
 	iodup,
 	ifn

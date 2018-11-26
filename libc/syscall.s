@@ -32,7 +32,7 @@ sys open, 12
 sys func, 13
 ;sys poll, 14
 sys close, 15
-sys __mountfd, 16;sys mount, 16
+sys mount, 16
 sys fd2path, 17
 sys chdir, 18
 sys ioperm, 19

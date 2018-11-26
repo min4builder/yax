@@ -20,7 +20,7 @@ extern sys_close
 extern sys_dup2
 extern sys_chdir
 extern sys_pipe
-extern sys_mountfd
+extern sys_mount
 extern sys_fd2path
 
 extern sys_getprintk
@@ -141,7 +141,7 @@ calltable:
 	dd sys_func
 	dd 0 ;sys_poll
 	dd sys_close
-	dd sys_mountfd ;sys_mount
+	dd sys_mount
 	dd sys_fd2path
 	dd sys_chdir
 	dd sys_ioperm

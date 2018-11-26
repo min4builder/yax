@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <codas/ref.h>
 #include <yax/mapflags.h>
-#include "conn.h"
+#include "fs/conn.h"
 
 typedef struct {
 	RefCounted rc;

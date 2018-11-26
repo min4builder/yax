@@ -3,10 +3,10 @@
 #include <sys/lock.h>
 #include <sys/types.h>
 #include <yax/openflags.h>
-#include "conn.h"
+#include "fs/conn.h"
+#include "fs/pipe.h"
 #include "mem/malloc.h"
 #include "multitask.h"
-#include "pipe.h"
 #include "stat.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -78,7 +78,7 @@ static Conn *dup(Conn *c)
 	return c;
 }
 
-static long long fn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t off)
+static long long fn(Conn *c, int fn, int submsg, void *buf, size_t len, void *buf2, size_t len2, off_t off)
 {
 	switch(fn) {
 	case MSREAD: {
@@ -141,11 +141,10 @@ static long long fn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t of
 	default:
 		return -EINVAL;
 	}
-	(void) off;
+	(void) buf2, (void) len2, (void) off;
 }
 
 static Dev dev = {
-	MIMPL(MSREAD) | MIMPL(MSWRITE) | MIMPL(MSTAT) | MIMPL(MOPEN),
 	del,
 	dup,
 	fn

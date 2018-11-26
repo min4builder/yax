@@ -4,10 +4,10 @@
 #include <codas/ref.h>
 #include <yax/mountflags.h>
 #include <yax/openflags.h>
-#include "fds.h"
+#include "fs/fds.h"
+#include "fs/name.h"
 #include "mem/malloc.h"
 #include "multitask.h"
-#include "name.h"
 #include "printk.h"
 
 static void mfree(const RefCounted *rc)

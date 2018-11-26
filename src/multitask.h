@@ -6,10 +6,10 @@
 #include <yax/const.h>
 #include <yax/rfflags.h>
 #include "arch.h"
-#include "fds.h"
+#include "fs/fds.h"
+#include "fs/name.h"
 #include "mem/pgdir.h"
 #include "mem/str.h"
-#include "name.h"
 
 typedef struct Proc Proc;
 

@@ -42,7 +42,7 @@ void *vpgkmap(size_t len, enum mapprot prot)
 		return ERR2PTR(-ENOMEM);
 	for(i = pgs; i < pgs + len; i += PGLEN) {
 		uintptr_t p = ppgalloc();
-		pgmap(i, pgemk(p, prot, 0));
+		pgmap(i, pgemk(p, prot, 0, 0));
 	}
 	return (void *) pgs;
 }
@@ -144,7 +144,7 @@ void *vpgpmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, ui
 			return ERR2PTR(-ENOMEM);
 	}
 	for(i = pgs; i < pgs + len; i += PGLEN) {
-		pgmap(i, pgemk(phys, prot, flags & MAP_NOSHARE));
+		pgmap(i, pgemk(phys, prot, flags & MAP_NOSHARE, 1));
 	}
 	return (void *) pgs;
 }
@@ -209,6 +209,14 @@ PgDir *vpgcopy(int memshare)
 					uxprintk((*(PgDir *)SPG)[j]);
 					cprintk('\n');
 				}
+			} else if((*pt)[j] & PGPHYS) {
+				(*(PgDir *)SPG)[j] = (*pt)[j];
+				uxprintk((i * 1024 + j) * PGLEN);
+				printk(" Phys old PTE: ");
+				uxprintk((*pt)[j]);
+				printk(" new PTE: ");
+				uxprintk((*(PgDir *)SPG)[j]);
+				cprintk('\n');
 			} else if((*pt)[j] & PGWRITEABLE && (!memshare || (*pt)[j] & PGNOSHARE)) {
 				Page *p;
 				(*(PgDir *)SPG)[j] = (*pt)[j] = ((*pt)[j] & ~PGWRITEABLE) | PGCOW;
@@ -284,7 +292,7 @@ static int ensure(uintptr_t pga, enum mapprot prot)
 		if(pg->p == (uintptr_t) NOPHYSPG) {
 			pg->p = ppgalloc();
 			pmapset(pg->p, pg);
-			pe = pgemk(pg->p, pg->prot, pg->noshare);
+			pe = pgemk(pg->p, pg->prot, pg->noshare, 0);
 			pgmap(pga, pe | PGWRITEABLE);
 			if(!pg->c)
 				memset((void *) pga, 0, PGLEN);
@@ -298,7 +306,7 @@ static int ensure(uintptr_t pga, enum mapprot prot)
 			(uxprintk)(pe);
 			(cprintk)('\n');
 		} else
-			pgmap(pga, pgemk(pg->p, pg->prot, pg->noshare));
+			pgmap(pga, pgemk(pg->p, pg->prot, pg->noshare, 0));
 		return 0;
 	}
 	return -1;

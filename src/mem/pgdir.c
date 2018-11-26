@@ -9,10 +9,11 @@
 #include "mem/user.h"
 #include "printk.h"
 
-PgEntry pgemk(uintptr_t addr, enum mapprot prot, int noshare)
+PgEntry pgemk(uintptr_t addr, enum mapprot prot, int noshare, int phys)
 {
 	return addr
 		| (noshare ? PGNOSHARE : 0)
+		| (phys ? PGPHYS : 0)
 		| (addr >= (uintptr_t) VIRT(0) ? PGGLOBAL : PGUSER)
 		| (prot & PROT_WRITE ? PGWRITEABLE : 0)
 		| PGPRESENT;
@@ -47,14 +48,14 @@ uintptr_t pgunmap(uintptr_t pg)
 	uintptr_t p = 0;
 	PgEntry *pe;
 	unsigned int i;
-	printk("unmap(");
-	uxprintk(pg);
-	printk(");\n");
 	if((*PGDIR)[(pg / PGLEN) / 1024] & PGPRESENT) {
 		PgDir *pt = PT((pg / PGLEN) / 1024);
 		Page *up;
 		pe = &(*pt)[(pg / PGLEN) % 1024];
 		if(*pe & PGPRESENT) {
+			printk("unmap(");
+			uxprintk(pg);
+			printk(");\n");
 			p = *pe & PGADDR;
 			if(*pe & PGDIRTY) {
 				/* TODO implement this */

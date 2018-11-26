@@ -4,10 +4,10 @@
 #define __YAX__
 #include <sys/types.h>
 #include <yax/openflags.h>
-#include "conn.h"
+#include "fs/conn.h"
+#include "fs/printkfs.h"
 #include "mem/malloc.h"
 #include "printk.h"
-#include "printkfs.h"
 #include "stat.h"
 
 static Dev ops;
@@ -30,7 +30,7 @@ static Conn *dup(Conn *c)
 	return c;
 }
 
-static long long fn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t off)
+static long long fn(Conn *c, int fn, int submsg, void *buf, size_t len, void *buf2, size_t len2, off_t off)
 {
 	switch(fn) {
 	case MSWRITE: {
@@ -49,11 +49,10 @@ static long long fn(Conn *c, int fn, int submsg, void *buf, size_t len, off_t of
 	default:
 		return -EINVAL;
 	}
-	(void) c, (void) off;
+	(void) c, (void) buf2, (void) len2, (void) off;
 }
 
 static Dev ops = {
-	MIMPL(MSWRITE) | MIMPL(MSTAT) | MIMPL(MOPEN),
 	del,
 	dup,
 	fn

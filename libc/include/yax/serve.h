@@ -10,6 +10,8 @@ typedef struct {
 	int fid;
 	void *buf;
 	size_t len;
+	void *buf2;
+	size_t len2;
 	off_t off;
 	long long ret;
 } Req;

@@ -3,10 +3,13 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/mount.h>
-#include <sys/port.h>
-#include <sys/serve.h>
 #include <unistd.h>
+#include <yax/func.h>
+#include <yax/mount.h>
+#include <yax/port.h>
+#include <yax/serve.h>
+#include <yax/stat.h>
+#include <codas/bit.h>
 
 static char map[] = {
 	0x00, 0x1b, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '[', ']', '\b',
@@ -23,9 +26,15 @@ int main(int argc, char **argv)
 	int a;
 	char *vga = mmap(0, 80 * 25 * 2, PROT_READ | PROT_WRITE, MAP_PHYS, 0, 0xB8000);
 	int irq1 = open("/irq/1", O_RDONLY);
+	Qid qid = { 0x80, 0, 0 };
 
-	fd = mkmnt(&mnt);
-	__mountfd("/dev", fd, MAFTER);
+	fd = mkmnt(&mnt, qid);
+	if(fork() > 0) {
+		if(func(fd, MAUTH, 0, "", 0, 0, 0, 0) < 0)
+			exits("failed for no reason");
+		mount("/dev", fd, MAFTER);
+		return 0;
+	}
 	close(fd);
 
 	ioperm(0x3d4, 0x3d5, 1);
@@ -44,6 +53,16 @@ int main(int argc, char **argv)
 	for(;;) {
 		Req r = recv(mnt);
 		switch(r.fn) {
+		case MAUTH:
+			if(r.fid != 0) {
+				r.ret = -EACCES;
+				break;
+			}
+			if(r.len2 != 0) {
+				r.ret = -EACCES;
+				break;
+			}
+			break;
 		case MDEL:
 			break;
 		case MDUP:
@@ -51,7 +70,7 @@ int main(int argc, char **argv)
 			break;
 		case MOPEN:
 			if(r.submsg & O_EXCL)
-				r.ret = -1;
+				r.ret = -EACCES;
 			else
 				r.ret = 0;
 			break;
@@ -137,9 +156,16 @@ outloop:		break;
 			r.ret = off;
 			break;
 		case MWALK:
+			if(r.len2 != 13) {
+				r.ret = -EINVAL;
+				break;
+			}
 			if(strncmp(r.buf, "cons", r.len) != 0) {
 				r.ret = -ENOENT;
 			} else {
+				PBIT64(r.buf2, 1);
+				PBIT32((char *)r.buf2+8, 0);
+				PBIT8((char *)r.buf2+12, 0x44);
 				r.ret = 1;
 			}
 			break;

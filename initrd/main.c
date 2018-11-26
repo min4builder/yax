@@ -1,20 +1,22 @@
 #define __YAX__
-#include <sys/mount.h>
 #include <unistd.h>
+#include <yax/func.h>
+#include <yax/mount.h>
 
 extern char initrd;
 extern size_t initrdlen;
 
 extern char **environ;
 
+int tarfsmkmnt(int *);
 void tarfsserve(int, char *, size_t);
 
 int main(int argc, char **argv)
 {
 	int fd, mnt;
 
-	fd = mkmnt(&mnt);
-	__mountfd("/", fd, MAFTER);
+	fd = tarfsmkmnt(&mnt);
+	mount("/", fd, MAFTER);
 	close(fd);
 
 	if(rfork(RFPROC|RFFDG)) {

@@ -1,9 +1,9 @@
 #define __YAX__
 #include <codas/ref.h>
-#include "conn.h"
+#include "fs/conn.h"
 #include "mem/malloc.h"
 #include "multitask.h"
-#include "fds.h"
+#include "fs/fds.h"
 
 static void ffree(const RefCounted *rc)
 {

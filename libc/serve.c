@@ -24,6 +24,12 @@ Req recv(int fd)
 		m.buf = (void *) GBIT32(bufr);
 		bufr += 4;
 	}
+	if(m.fn & MWANTSPTR2) {
+		m.len2 = GBIT32(bufr);
+		bufr += 4;
+		m.buf2 = (void *) GBIT32(bufr);
+		bufr += 4;
+	}
 	if(m.fn & MWANTSOFF) {
 		m.off = GBIT64(bufr);
 		bufr += 8;

@@ -3,8 +3,11 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/serve.h>
 #include <unistd.h>
+#include <yax/mount.h>
+#include <yax/stat.h>
+#include <yax/serve.h>
+#include <codas/bit.h>
 
 typedef struct File File;
 struct File {
@@ -139,6 +142,12 @@ static ssize_t tpread(Fid *fid, void *buf, size_t len, off_t off)
 	return len;
 }
 
+int tarfsmkmnt(int *b)
+{
+	Qid qid = { 0x80, 0, 0 };
+	return mkmnt(b, qid);
+}
+
 void tarfsserve(int fd, char *file)
 {
 	setupdirs(file);
@@ -147,6 +156,17 @@ void tarfsserve(int fd, char *file)
 	for(;;) {
 		Req r = recv(fd);
 		switch(r.fn) {
+		case MAUTH:
+			if(r.fid != 0) {
+				r.ret = -EACCES;
+				break;
+			}
+			if(r.len != 0) {
+				r.ret = -EACCES;
+				break;
+			}
+			r.ret = 0;
+			break;
 		case MDEL:
 			fs[r.fid].f = 0;
 			fs[r.fid].open = 0;
@@ -163,9 +183,6 @@ void tarfsserve(int fd, char *file)
 			}
 			break;
 		}
-		case MSREAD:
-			r.off = fs[r.fid].off;
-			/* FALLTHRU */
 		case MPREAD:
 			r.ret = tpread(&fs[r.fid], r.buf, r.len, r.off);
 			break;
@@ -183,16 +200,20 @@ void tarfsserve(int fd, char *file)
 			}
 			r.ret = fs[r.fid].off;
 			break;
-		case MSTAT:
-			exits("broken");
-			break;
 		case MWALK: {
 			File *f;
+			if(r.len2 != 13) {
+				r.ret = -EINVAL;
+				break;
+			}
 			r.ret = -ENOENT;
 			for(f = fs[r.fid].f->sub; f; f = f->next) {
 				if(!strncmp(f->d.name, r.buf, r.len)) {
 					fs[r.fid].f = f;
 					r.ret = f->d.qid.path;
+					PBIT8(r.buf2, f->d.qid.type);
+					PBIT32((char *)r.buf2+1, f->d.qid.vers);
+					PBIT64((char *)r.buf2+5, f->d.qid.path);
 					break;
 				}
 			}
@@ -205,13 +226,6 @@ void tarfsserve(int fd, char *file)
 				fs[r.fid].open = r.submsg;
 				r.ret = 0;
 			}
-			break;
-		case MPWRITE:
-		case MSWRITE:
-			r.ret = -EACCES;
-			break;
-		case MWSTAT:
-			r.ret = -EACCES;
 			break;
 		}
 		answer(r, fd);

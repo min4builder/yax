@@ -5,7 +5,7 @@
 #include <sys/types.h>
 #include <codas/ref.h>
 #include <yax/mapflags.h>
-#include "conn.h"
+#include "fs/conn.h"
 #include "mem/pgdir.h"
 
 /* used by physmman; must not call any of its functions */

@@ -5,12 +5,12 @@ LIBS=-lcodas -lk
 
 QEMU=-serial stdio -kernel yax.bin -initrd ../initrd/initrd -hda /dev/zero
 
-# boot.o must be first
-OBJS = boot.o conn.o exec.o fds.o int.o iofs.o main.o mem/malloc.o \
-	mem/pgdir.o mem/pgdirs.o mem/phys.o mem/str.o mem/user.o \
-	mem/usrboundary.o mem/virt.o mnt.o multitask.o multitasks.o name.o \
-	pic.o pipe.o pit.o printk.o printkfs.o ssp.o stat.o syscall.o \
-	sysentry.o
+FS = fs/conn.o fs/fds.o fs/iofs.o fs/mnt.o fs/name.o fs/pipe.o fs/printkfs.o
+MEM = mem/malloc.o mem/pgdir.o mem/pgdirs.o mem/phys.o mem/str.o mem/user.o \
+	mem/usrboundary.o mem/virt.o
+# boot.o must be first, otherwise alphabetic order
+OBJS := boot.o exec.o $(FS) int.o main.o $(MEM) multitask.o multitasks.o pic.o \
+	pit.o printk.o ssp.o stat.o syscall.o sysentry.o
 
 all: yax.bin
 

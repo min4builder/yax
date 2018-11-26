@@ -7,18 +7,18 @@
 #include <yax/openflags.h>
 #include <yax/rfflags.h>
 #include "boot.h"
-#include "conn.h"
 #include "exec.h"
-#include "fds.h"
+#include "fs/conn.h"
+#include "fs/fds.h"
+#include "fs/mnt.h"
+#include "fs/name.h"
+#include "fs/pipe.h"
+#include "fs/printkfs.h"
 #include "mem/malloc.h"
 #include "mem/usrboundary.h"
 #include "mem/virt.h"
-#include "mnt.h"
 #include "multitask.h"
-#include "name.h"
-#include "pipe.h"
 #include "printk.h"
-#include "printkfs.h"
 #include "syscall.h"
 #include "sysentry.h"
 
@@ -125,12 +125,12 @@ bail:
 	return ret;
 }
 
-int sys_mkmnt(int *master)
+int sys_mkmnt(int *master, Qid qid)
 {
 	Conn *root, *m;
 	if(!verusrptr(master, sizeof(*master), PROT_WRITE))
 		return -EINVAL;
-	root = mntnew(&m);
+	root = mntnew(&m, qid);
 	if(!root)
 		return -EIO;
 	*master = fdalloc(m);
@@ -306,7 +306,7 @@ int sys_open(const char *name, int fl, int mode)
 	return fd;
 }
 
-long long sys_func(int fd, int fn, int sub, void *buf, size_t len, off_t off)
+long long sys_func(int fd, int fn, int sub, void *buf, size_t len, void *buf2, size_t len2, off_t off)
 {
 	Conn *c;
 	if(fn & MWANTSPTR) {
@@ -317,7 +317,7 @@ long long sys_func(int fd, int fn, int sub, void *buf, size_t len, off_t off)
 	c = FD2CONN(fd);
 	if(!c)
 		return -EINVAL;
-	return connfunc(c, fn, sub, buf, len, off);
+	return connfuncpp(c, fn, sub, buf, len, buf2, len2, off);
 }
 
 void sys_close(int fd)
@@ -352,7 +352,7 @@ void sys_chdir(const char *name)
 	printk(");\n");
 }
 
-int sys_mountfd(const char *from, int to, int fl)
+int sys_mount(const char *from, int to, int fl)
 {
 	Conn *c;
 	int res;

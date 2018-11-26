@@ -2,12 +2,12 @@
 #define __YAX__
 #include <string.h>
 #include <sys/types.h>
+#include <codas/bit.h>
 #include <codas/ref.h>
 #include <yax/openflags.h>
-#include "conn.h"
+#include "fs/conn.h"
 #include "mem/malloc.h"
 #include "multitask.h"
-#include "pipe.h"
 #include "printk.h"
 
 static void cfree(const RefCounted *rc)
@@ -35,19 +35,30 @@ Conn *conndup(Conn *c, Str *name)
 	Conn *d;
 	printk("{Dup}");
 	d = c->dev->dup(c);
-	if(d) {
-		mkref(d, cfree);
-		d->name = name;
-		ref(name);
-	}
+	ref(name);
+	d->name = name;
 	return d;
 }
 
 long long connfunc(Conn *c, int f, int sf, void *buf, size_t len, off_t off)
 {
-	if(c->dev->impl & MIMPL(f)) {
-		return c->dev->f(c, f, sf, buf, len, off);
+	return connfuncpp(c, f, sf, buf, len, 0, 0, off);
+}
+
+long long connfuncpp(Conn *c, int f, int sf, void *buf, size_t len, void *buf2, size_t len2, off_t off)
+{
+	if(f == MWALK) {
+		char walk[13];
+		long long ret = c->dev->f(c, f, sf, buf, len, walk, sizeof walk, off);
+		if(ret >= 0) {
+			c->qid.type = walk[0];
+			c->qid.vers = GBIT32(walk+1);
+			c->qid.path = GBIT64(walk+5);
+		}
+		return ret;
 	}
+	return c->dev->f(c, f, sf, buf, len, buf2, len2, off);
+#if 0
 	/* default actions */
 	switch(f) {
 	case MOPEN: {
@@ -58,7 +69,7 @@ long long connfunc(Conn *c, int f, int sf, void *buf, size_t len, off_t off)
 		return -ENOTDIR;
 	}
 	case MSREAD: {
-		if(c->dev->impl & MIMPL(MPREAD)) {
+		if(c->impl & MIMPL(MPREAD)) {
 			ssize_t ret;
 			off = connfunc(c, MSEEK, 1, 0, 0, 0);
 			if(off < 0) return off;
@@ -72,7 +83,7 @@ long long connfunc(Conn *c, int f, int sf, void *buf, size_t len, off_t off)
 		}
 	}
 	case MSWRITE: {
-		if(c->dev->impl & MIMPL(MPWRITE)) {
+		if(c->impl & MIMPL(MPWRITE)) {
 			ssize_t ret;
 			off = connfunc(c, MSEEK, 1, 0, 0, 0);
 			if(off < 0) return off;
@@ -86,7 +97,7 @@ long long connfunc(Conn *c, int f, int sf, void *buf, size_t len, off_t off)
 		}
 	}
 	case MSEEK: {
-		if(c->dev->impl & (MIMPL(MPREAD) | MIMPL(MPWRITE))) {
+		if(c->impl & (MIMPL(MPREAD) | MIMPL(MPWRITE))) {
 			/* TODO */
 			return -EIO;
 		} else {
@@ -94,7 +105,7 @@ long long connfunc(Conn *c, int f, int sf, void *buf, size_t len, off_t off)
 		}
 	}
 	case MPREAD: {
-		if(c->dev->impl & MIMPL(MSREAD)) {
+		if(c->impl & MIMPL(MSREAD)) {
 			off_t ooff = connfunc(c, MSEEK, 0, 0, 0, off);
 			ssize_t ret;
 			if(ooff < 0) return ooff;
@@ -108,7 +119,7 @@ long long connfunc(Conn *c, int f, int sf, void *buf, size_t len, off_t off)
 		}
 	}
 	case MPWRITE: {
-		if(c->dev->impl & MIMPL(MSWRITE)) {
+		if(c->impl & MIMPL(MSWRITE)) {
 			off_t ooff = connfunc(c, MSEEK, 0, 0, 0, off);
 			ssize_t ret;
 			if(ooff < 0) return ooff;
@@ -130,5 +141,6 @@ long long connfunc(Conn *c, int f, int sf, void *buf, size_t len, off_t off)
 	default:
 		return -EINVAL;
 	}
+#endif
 }
 

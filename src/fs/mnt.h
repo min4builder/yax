@@ -3,7 +3,7 @@
 
 #include "conn.h"
 
-Conn *mntnew(Conn **);
+Conn *mntnew(Conn **, Qid);
 
 #endif /* _MNT_H */
 
