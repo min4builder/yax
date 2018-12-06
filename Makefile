@@ -1,4 +1,4 @@
-SUBDIRS=libc libcodas drivers initrd src
+SUBDIRS=libc libcodas libyaxfs drivers initrd src
 
 all:
 	./install-headers.sh

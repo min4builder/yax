@@ -2,6 +2,7 @@
 #define _YAX_FN_H
 
 enum {
+	MWANTSMASK = 0xffff,
 	MWANTSOFF = 1 << 16,
 	MWANTSPTR = 1 << 17,
 	MWANTSWR = 1 << 18,

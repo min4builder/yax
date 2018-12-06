@@ -1,4 +1,4 @@
-/*#define NDEBUG*/
+#define NDEBUG
 #define __YAX__
 #include <string.h>
 #include <sys/types.h>
@@ -47,6 +47,31 @@ long long connfunc(Conn *c, int f, int sf, void *buf, size_t len, off_t off)
 
 long long connfuncpp(Conn *c, int f, int sf, void *buf, size_t len, void *buf2, size_t len2, off_t off)
 {
+	printk("{");
+	iprintk(f & MWANTSMASK);
+	printk(" ");
+	xprintk(sf);
+	if(f & MWANTSPTR) {
+		printk(" ");
+		iprintk(len);
+		if(!(f & MWANTSWR)) {
+			printk(" ");
+			nprintk(len, buf);
+		}
+	}
+	if(f & MWANTSPTR2) {
+		printk(" ");
+		iprintk(len2);
+		if(!(f & MWANTSWR2)) {
+			printk(" ");
+			nprintk(len2, buf2);
+		}
+	}
+	if(f & MWANTSOFF) {
+		printk(" ");
+		iprintk(off);
+	}
+	printk("}");
 	if(f == MWALK) {
 		char walk[13];
 		long long ret = c->dev->f(c, f, sf, buf, len, walk, sizeof walk, off);

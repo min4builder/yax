@@ -76,7 +76,13 @@ _YALCTYPESZ(size_t, unsigned long);
 _YALCTYPESZ(ssize_t, long);
 _YALCTYPESZ(time_t, unsigned long long);
 _YALCTYPESZ(uid_t, long);
+#ifndef __cplusplus
+#ifdef __WCHAR_TYPE__
+_YALCTYPESZ(wchar_t, __WCHAR_TYPE__);
+#else
 _YALCTYPESZ(wchar_t, unsigned long);
+#endif
+#endif
 
 #ifdef __cplusplus
 }

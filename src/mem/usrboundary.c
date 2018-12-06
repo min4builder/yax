@@ -98,7 +98,7 @@ void *putusrptr(PgList *pl)
 	ref(pl);
 	for(i = pgs; i < pgs + pl->len; i += PGLEN) {
 		/* TODO security */
-		pgmap(i, pgemk(pl->e[(i - pgs) / PGLEN], PROT_READ | PROT_WRITE, 1));
+		pgmap(i, pgemk(pl->e[(i - pgs) / PGLEN], PROT_READ | PROT_WRITE, 1, 0));
 	}
 	return (void *) (pgs + pl->delta);
 }

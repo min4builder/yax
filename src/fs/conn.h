@@ -1,10 +1,10 @@
 #ifndef _CONN_H
 #define _CONN_H
 
-#include <sys/lock.h>
 #include <sys/types.h>
 #include <codas/ref.h>
 #include <yax/fn.h>
+#include <yax/lock.h>
 #include "mem/str.h"
 #include "stat.h"
 

@@ -9,6 +9,8 @@ _YALCDEFTYPE(mode_t);
 _YALCDEFTYPE(size_t);
 _YALCDEFTYPE(off_t);
 
+#define MAP_FAILED ((void *) -1)
+
 void *mmap(void *, size_t, int, int, int, off_t);
 int munmap(void *, size_t);
 

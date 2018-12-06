@@ -1,9 +1,9 @@
 #ifndef _MULTITASK_H
 #define _MULTITASK_H
 
-#include <sys/lock.h>
 #include <sys/types.h>
 #include <yax/const.h>
+#include <yax/lock.h>
 #include <yax/rfflags.h>
 #include "arch.h"
 #include "fs/fds.h"

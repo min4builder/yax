@@ -11,14 +11,15 @@
 #include "fs/name.h"
 #include "fs/pipe.h"
 #include "int.h"
+#include "mem/malloc.h"
+#include "mem/phys.h"
+#include "mem/virt.h"
 #include "multitask.h"
 #include "pic.h"
 #include "pit.h"
-#include "mem/phys.h"
 #include "printk.h"
 #include "syscall.h"
 #include "sysentry.h"
-#include "mem/virt.h"
 
 void dumpregs(Regs *);
 
@@ -113,14 +114,15 @@ void kernel_main(MultibootInfo *mbinfo)
 	if(procrfork(RFPROC|RFMEM|RFFDG) != 0)
 		for(;;) idle();
 
+	/* exec on kernelland only changes user mappings, we will still be
+	 * running here until we change to user mode */
 	if((err = execmod(VIRT(mod.start), mod.end - mod.start, &code, "'argv'", "'envp'")) < 0 && err > -MAXERR) {
 		printk("exec = E");
 		uxprintk(-err);
 		cprintk('\n');
 		halt();
 	}
-	/* exec on kernelland only changes user mappings, we are still running
-	 * here until we change to user mode */
+
 	/* no need for these anymore */
 	for(i = (uintptr_t) mod.start; i <= (uintptr_t) mod.end; i += PGLEN)
 		ppgfree(i);

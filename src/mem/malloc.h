@@ -2,7 +2,7 @@
 #define _LIBALLOC_H
 
 #define __YAX__
-#include <sys/lock.h>
+#include <yax/lock.h>
 #include "mem/virt.h"
 
 /** \defgroup ALLOCHOOKS liballoc hooks 

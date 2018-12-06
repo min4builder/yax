@@ -1,4 +1,4 @@
-#define __YAX__
+#define _BSD_SOURCE
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -8,14 +8,7 @@
 #include <yax/stat.h>
 #include <yax/serve.h>
 #include <codas/bit.h>
-
-typedef struct File File;
-struct File {
-	Dir d;
-	char *pos;
-	File *sub;
-	File *next;
-};
+#include <yaxfs.h>
 
 typedef struct {
 	File *f;
@@ -82,7 +75,7 @@ static Dir mkdirent(int j, int dir, int perm, const char *name, const char *uid,
 	Dir d = { { 0, 0, 0 }, 0, 0, 0, 0, "", "", "", "" };
 	d.qid.path = j;
 	d.qid.vers = 0;
-	d.qid.type = dir ? 0x80 : 0;
+	d.qid.type = dir ? QTDIR : 0;
 	d.mode = (d.qid.type << 24) | perm;
 	d.length = size;
 	if(name[strlen(name)-1] == '/') {
@@ -90,33 +83,33 @@ static Dir mkdirent(int j, int dir, int perm, const char *name, const char *uid,
 		strlcpy(newname, name, strlen(name));
 		name = newname;
 	}
-	d.name = (char *)name;
-	d.uid = (char *)uid;
-	d.gid = (char *)gid;
+	d.name = name;
+	d.uid = uid;
+	d.gid = gid;
 	d.muid = d.uid;
 	return d;
 }
 
-static void setupdir(File *d, char *path, char *file)
+static void setupdir(File *dir, char *path, char *file)
 {
 	char *f = file;
 	while(!memcmp(f + 257, "ustar", 5)) {
 		int size = oparse(f + 124, 11);
 		if(subent(f + 345, f, path)) {
-			File *nf = malloc(sizeof(File));
-			nf->pos = f;
-			nf->d = mkdirent((int)f, f[156] == '5', oparse(f + 100, 6), fname(f), f + 265, f + 297, size);
-			nf->sub = 0;
-			nf->next = d->sub;
-			d->sub = nf;
+			Dir d = mkdirent((int)f, f[156] == '5', oparse(f + 100, 6), fname(f), f + 265, f + 297, size);
+			File *nf;
 			if(f[156] == '5') {
-				char *np = malloc(strlen(path) + strlen(nf->d.name) + 2);
+				char *np = malloc(strlen(path) + strlen(d.name) + 2);
 				strcpy(np, path);
-				strcat(np, nf->d.name);
+				strcat(np, d.name);
 				strcat(np, "/");
+				nf = dirnew(d);
 				setupdir(nf, np, file);
 				free(np);
+			} else {
+				nf = filenew(d, f, 0);
 			}
+			diraddfile(dir, nf);
 		}
 		f += ((size + 1023) / 512) * 512;
 	}
@@ -124,11 +117,7 @@ static void setupdir(File *d, char *path, char *file)
 
 static void setupdirs(char *file)
 {
-	root = malloc(sizeof(File));
-	root->pos = 0;
-	root->d = mkdirent(0, 1, 0777, "/", "", "", 0);
-	root->sub = 0;
-	root->next = 0;
+	root = dirnew(mkdirent(0, 1, 0777, "/", "", "", 0));
 	setupdir(root, "/", file);
 }
 
@@ -136,9 +125,9 @@ static ssize_t tpread(Fid *fid, void *buf, size_t len, off_t off)
 {
 	if(!(fid->open & O_RDONLY))
 		return -EACCES;
-	if(off + len > fid->f->d.length)
-		len = fid->f->d.length - off < 0 ? 0 : fid->f->d.length - off;
-	memcpy(buf, fid->f->pos + 512 + off, len);
+	if(off + len > fid->f->dir.length)
+		len = fid->f->dir.length - off < 0 ? 0 : fid->f->dir.length - off;
+	memcpy(buf, (char *) fid->f->aux + 512 + off, len);
 	return len;
 }
 
@@ -195,7 +184,7 @@ void tarfsserve(int fd, char *file)
 				fs[r.fid].off += r.off;
 				break;
 			case 2:
-				fs[r.fid].off = fs[r.fid].f->d.length + r.off;
+				fs[r.fid].off = fs[r.fid].f->dir.length + r.off;
 				break;
 			}
 			r.ret = fs[r.fid].off;
@@ -207,14 +196,17 @@ void tarfsserve(int fd, char *file)
 				break;
 			}
 			r.ret = -ENOENT;
-			for(f = fs[r.fid].f->sub; f; f = f->next) {
-				if(!strncmp(f->d.name, r.buf, r.len)) {
+			if(!(fs[r.fid].f->dir.mode & DMDIR)) {
+				r.ret = -ENOTDIR;
+			} else {
+				f = dirwalk(fs[r.fid].f, r.buf, r.len);
+				if(f) {
+					PBIT8(r.buf2, f->dir.qid.type);
+					PBIT32((char *)r.buf2+1, f->dir.qid.vers);
+					PBIT64((char *)r.buf2+9, f->dir.qid.path);
 					fs[r.fid].f = f;
-					r.ret = f->d.qid.path;
-					PBIT8(r.buf2, f->d.qid.type);
-					PBIT32((char *)r.buf2+1, f->d.qid.vers);
-					PBIT64((char *)r.buf2+5, f->d.qid.path);
-					break;
+					fs[r.fid].open = 0;
+					r.ret = 0;
 				}
 			}
 			break;
@@ -226,6 +218,9 @@ void tarfsserve(int fd, char *file)
 				fs[r.fid].open = r.submsg;
 				r.ret = 0;
 			}
+			break;
+		default:
+			r.ret = -ENOSYS;
 			break;
 		}
 		answer(r, fd);

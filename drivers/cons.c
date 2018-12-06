@@ -10,6 +10,7 @@
 #include <yax/serve.h>
 #include <yax/stat.h>
 #include <codas/bit.h>
+#include <yaxfs.h>
 
 static char map[] = {
 	0x00, 0x1b, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '[', ']', '\b',

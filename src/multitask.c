@@ -1,10 +1,10 @@
-/*#define NDEBUG*/
+#define NDEBUG
 #define __YAX__
 #include <string.h>
-#include <sys/lock.h>
 #include <sys/types.h>
 #include <codas/macro.h>
 #include <yax/const.h>
+#include <yax/lock.h>
 #include <yax/rfflags.h>
 #include "arch.h"
 #include "boot.h"

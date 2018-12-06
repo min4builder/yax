@@ -1,5 +1,5 @@
-#include <sys/lock.h>
 #include <codas/ref.h>
+#include <yax/lock.h>
 
 /* names in parentheses because of the macros of same name (see ref.h) */
 void (mkref)(RefCounted *rc, void (*free)(const RefCounted *))

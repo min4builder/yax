@@ -1,7 +1,7 @@
 #define __YAX__
 #include <string.h>
-#include <sys/lock.h>
 #include <sys/types.h>
+#include <yax/lock.h>
 #include <yax/openflags.h>
 #include "fs/conn.h"
 #include "fs/pipe.h"

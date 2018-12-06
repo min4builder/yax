@@ -1,9 +1,10 @@
 #define __YAX__
+#define NDEBUG
 #include <string.h>
-#include <sys/lock.h>
 #include <sys/types.h>
 #include <codas/bit.h>
 #include <yax/errorcodes.h>
+#include <yax/lock.h>
 #include <yax/openflags.h>
 #include <yax/stat.h>
 #include "fs/conn.h"
