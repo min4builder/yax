@@ -12,6 +12,9 @@ unsigned int ind(size_t port);
 void insb(size_t port, size_t len, void *buf);
 void insw(size_t port, size_t len, void *buf);
 void insd(size_t port, size_t len, void *buf);
+void outsb(size_t port, size_t len, void const *buf);
+void outsw(size_t port, size_t len, void const *buf);
+void outsd(size_t port, size_t len, void const *buf);
 void ioperm(size_t, size_t, int);
 
 #endif /* YAX_PORT_H_ */

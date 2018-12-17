@@ -5,6 +5,11 @@ global insb:function (insb.end - insb)
 global insw:function (insw.end - insw)
 global insd:function (insd.end - insd)
 global outb:function (outb.end - outb)
+global outw:function (outb.end - outb)
+global outd:function (outb.end - outb)
+global outsb:function (outb.end - outb)
+global outsw:function (outb.end - outb)
+global outsd:function (outb.end - outb)
 
 section .text
 inb:
@@ -65,6 +70,33 @@ outd:
 	mov dx, [esp + 4]
 	mov eax, [esp + 8]
 	out dx, eax
+	ret
+.end:
+outsb:
+	push esi
+	mov dx, [esp + 8]
+	mov ecx, [esp + 12]
+	mov esi, [esp + 16]
+	rep outsb
+	pop esi
+	ret
+.end:
+outsw:
+	push esi
+	mov dx, [esp + 8]
+	mov ecx, [esp + 12]
+	mov esi, [esp + 16]
+	rep outsw
+	pop esi
+	ret
+.end:
+outsd:
+	push esi
+	mov dx, [esp + 8]
+	mov ecx, [esp + 12]
+	mov esi, [esp + 16]
+	rep outsd
+	pop esi
 	ret
 .end:
 

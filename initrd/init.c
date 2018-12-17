@@ -10,7 +10,7 @@ static pid_t spawn(const char *name, char **argv)
 		return p;
 	else if(p == 0)
 		execve(name, argv, environ);
-	exit(1);
+	exits("exec");
 }
 
 int main(int argc, char **argv)
@@ -20,6 +20,8 @@ int main(int argc, char **argv)
 	char buf[128];
 	char *a[] = { "/bin/cons", 0 };
 	spawn("/bin/cons", a);
+	a[0] = "/bin/disk";
+	spawn("/bin/disk", a);
 	chdir("/dev");
 	while(fd < 0)
 		fd = open("cons", O_RDWR);
