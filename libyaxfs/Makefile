@@ -1,6 +1,6 @@
 include ../config.mk
 
-OBJS:=file.o
+OBJS:=dofunc.o fid.o file.o serve.o
 
 all: headers $(LIBINSTALL)/libyaxfs.a
 

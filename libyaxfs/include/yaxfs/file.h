@@ -1,7 +1,8 @@
-#ifndef YAXFS_H_
-#define YAXFS_H_
+#ifndef YAXFS_FILE_H_
+#define YAXFS_FILE_H_
 
 #include <stddef.h>
+#include <yax/stat.h>
 
 typedef struct File File;
 struct File {
@@ -23,5 +24,5 @@ ssize_t filewstat(File *, void const *, size_t);
 
 void filedel(File *);
 
-#endif /* YAXFS_H_ */
+#endif /* YAXFS_FILE_H_ */
 

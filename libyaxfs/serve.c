@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <codas/bit.h>
-#include <yax/serve.h>
+#include <yaxfs/serve.h>
 
 Req recv(int fd)
 {

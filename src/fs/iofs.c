@@ -46,7 +46,7 @@ Conn *iofsnew(void)
 {
 	DirConn *rd = calloc(1, sizeof(*rd) + 1);
 	char *name = calloc(1, 1);
-	Qid qid = { 0x84, 0, 0 };
+	Qid qid = { QTDIR | QTTMP, 0, 0 };
 	conninit((Conn *)rd, name, qid, &rdev, rd);
 	return (Conn *) rd;
 }

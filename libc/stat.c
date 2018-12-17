@@ -1,10 +1,8 @@
-#define __YAX__
 #include <stdint.h>
 #include <string.h>
 #include <sys/types.h>
 #include <codas/bit.h>
 #include <yax/stat.h>
-#include "stat.h"
 
 size_t convD2M(Dir *d, char *buf, size_t len)
 {

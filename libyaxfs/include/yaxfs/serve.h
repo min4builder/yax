@@ -1,5 +1,5 @@
-#ifndef YAX_SERVE_H_
-#define YAX_SERVE_H_
+#ifndef YAXFS_SERVE_H_
+#define YAXFS_SERVE_H_
 
 #include <sys/types.h>
 #include <yax/fn.h>
@@ -19,5 +19,5 @@ typedef struct {
 Req recv(int fd);
 void answer(Req m, int fd);
 
-#endif /* YAX_SERVE_H_ */
+#endif /* YAXFS_SERVE_H_ */
 

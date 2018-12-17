@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <yax/stat.h>
-#include <yaxfs.h>
+#include <yaxfs/file.h>
 
 typedef struct {
 	int nents, cap;
@@ -93,7 +93,8 @@ void filedel(File *f)
 {
 	f->lncnt--;
 	if(f->lncnt <= 0) {
-		f->freeaux(f);
+		if(f->freeaux)
+			f->freeaux(f);
 		free(f);
 	}
 }

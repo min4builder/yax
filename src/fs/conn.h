@@ -5,8 +5,8 @@
 #include <codas/ref.h>
 #include <yax/fn.h>
 #include <yax/lock.h>
+#include <yax/stat.h>
 #include "mem/str.h"
-#include "stat.h"
 
 typedef struct Conn Conn;
 

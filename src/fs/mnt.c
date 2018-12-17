@@ -2,12 +2,12 @@
 #include <string.h>
 #include <codas/bit.h>
 #include <yax/openflags.h>
+#include <yax/stat.h>
 #include "fs/conn.h"
 #include "fs/mnt.h"
 #include "mem/malloc.h"
 #include "mem/usrboundary.h"
 #include "multitask.h"
-#include "stat.h"
 
 /* TODO gather supported messages */
 

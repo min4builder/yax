@@ -6,18 +6,11 @@
 #include <unistd.h>
 #include <yax/mount.h>
 #include <yax/stat.h>
-#include <yax/serve.h>
 #include <codas/bit.h>
-#include <yaxfs.h>
-
-typedef struct {
-	File *f;
-	off_t off;
-	int open;
-} Fid;
-
-static File *root;
-static Fid fs[256];
+#include <yaxfs/dofunc.h>
+#include <yaxfs/fid.h>
+#include <yaxfs/file.h>
+#include <yaxfs/serve.h>
 
 static int oparse(char *s, int l)
 {
@@ -76,7 +69,7 @@ static Dir mkdirent(int j, int dir, int perm, const char *name, const char *uid,
 	d.qid.path = j;
 	d.qid.vers = 0;
 	d.qid.type = dir ? QTDIR : 0;
-	d.mode = (d.qid.type << 24) | perm;
+	d.mode = (d.qid.type << 24) | (perm & ~0222);
 	d.length = size;
 	if(name[strlen(name)-1] == '/') {
 		char *newname = malloc(strlen(name));
@@ -115,16 +108,8 @@ static void setupdir(File *dir, char *path, char *file)
 	}
 }
 
-static void setupdirs(char *file)
-{
-	root = dirnew(mkdirent(0, 1, 0777, "/", "", "", 0));
-	setupdir(root, "/", file);
-}
-
 static ssize_t tpread(Fid *fid, void *buf, size_t len, off_t off)
 {
-	if(!(fid->open & O_RDONLY))
-		return -EACCES;
 	if(off + len > fid->f->dir.length)
 		len = fid->f->dir.length - off < 0 ? 0 : fid->f->dir.length - off;
 	memcpy(buf, (char *) fid->f->aux + 512 + off, len);
@@ -139,90 +124,14 @@ int tarfsmkmnt(int *b)
 
 void tarfsserve(int fd, char *file)
 {
-	setupdirs(file);
-	fs[0].f = root;
-	fs[0].open = 0;
+	Func func = { .pread = tpread };
+	Fidpool fds = FIDPOOL;
+	File *root = dirnew(mkdirent(0, 1, 0777, "/", "", "", 0));
+	setupdir(root, "/", file);
+	fidadd(&fds, fidnew(root, 0));
 	for(;;) {
 		Req r = recv(fd);
-		switch(r.fn) {
-		case MAUTH:
-			if(r.fid != 0) {
-				r.ret = -EACCES;
-				break;
-			}
-			if(r.len != 0) {
-				r.ret = -EACCES;
-				break;
-			}
-			r.ret = 0;
-			break;
-		case MDEL:
-			fs[r.fid].f = 0;
-			fs[r.fid].open = 0;
-			break;
-		case MDUP: {
-			int x;
-			for(x = 0; x < 256; x++) {
-				if(fs[x].f == 0) {
-					fs[x].f = fs[r.fid].f;
-					fs[x].open = fs[r.fid].open;
-					r.ret = x;
-					break;
-				}
-			}
-			break;
-		}
-		case MPREAD:
-			r.ret = tpread(&fs[r.fid], r.buf, r.len, r.off);
-			break;
-		case MSEEK:
-			switch(r.submsg) {
-			case 0:
-				fs[r.fid].off = r.off;
-				break;
-			case 1:
-				fs[r.fid].off += r.off;
-				break;
-			case 2:
-				fs[r.fid].off = fs[r.fid].f->dir.length + r.off;
-				break;
-			}
-			r.ret = fs[r.fid].off;
-			break;
-		case MWALK: {
-			File *f;
-			if(r.len2 != 13) {
-				r.ret = -EINVAL;
-				break;
-			}
-			r.ret = -ENOENT;
-			if(!(fs[r.fid].f->dir.mode & DMDIR)) {
-				r.ret = -ENOTDIR;
-			} else {
-				f = dirwalk(fs[r.fid].f, r.buf, r.len);
-				if(f) {
-					PBIT8(r.buf2, f->dir.qid.type);
-					PBIT32((char *)r.buf2+1, f->dir.qid.vers);
-					PBIT64((char *)r.buf2+9, f->dir.qid.path);
-					fs[r.fid].f = f;
-					fs[r.fid].open = 0;
-					r.ret = 0;
-				}
-			}
-			break;
-		}
-		case MOPEN:
-			if(r.submsg & (O_EXCL | O_WRONLY)) {
-				r.ret = -EACCES;
-			} else {
-				fs[r.fid].open = r.submsg;
-				r.ret = 0;
-			}
-			break;
-		default:
-			r.ret = -ENOSYS;
-			break;
-		}
+		dofunc(&r, &fds, &func);
 		answer(r, fd);
 	}
 }

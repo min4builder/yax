@@ -7,10 +7,12 @@
 #include <yax/func.h>
 #include <yax/mount.h>
 #include <yax/port.h>
-#include <yax/serve.h>
 #include <yax/stat.h>
 #include <codas/bit.h>
-#include <yaxfs.h>
+#include <yaxfs/dofunc.h>
+#include <yaxfs/fid.h>
+#include <yaxfs/file.h>
+#include <yaxfs/serve.h>
 
 static char map[] = {
 	0x00, 0x1b, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '[', ']', '\b',
@@ -22,21 +24,22 @@ static char map[] = {
 
 int main(int argc, char **argv)
 {
+	Fidpool fidp = FIDPOOL;
 	int fd, mnt;
-	off_t off = 0;
 	int a;
 	char *vga = mmap(0, 80 * 25 * 2, PROT_READ | PROT_WRITE, MAP_PHYS, 0, 0xB8000);
 	int irq1 = open("/irq/1", O_RDONLY);
 	Qid qid = { 0x80, 0, 0 };
+	File *root;
 
 	fd = mkmnt(&mnt, qid);
-	if(fork() > 0) {
-		if(func(fd, MAUTH, 0, "", 0, 0, 0, 0) < 0)
-			exits("failed for no reason");
-		mount("/dev", fd, MAFTER);
-		return 0;
-	}
+	mount("/dev", fd, MAFTER);
 	close(fd);
+
+	root = dirnew((Dir) { { QTDIR, 0, 0 }, DMDIR | 0555, 0, 0, 0, "/", "", "", "" });
+	diraddfile(root, filenew((Dir) { { QTAPPEND | QTTMP, 1, 0 }, DMAPPEND | DMTMP | 0660, 0, 0, 80 * 24, "cons", "", "", "" }, 0, 0));
+
+	fidadd(&fidp, fidnew(root, 0));
 
 	ioperm(0x3d4, 0x3d5, 1);
 	ioperm(0x60, 0x60, 1);
@@ -54,33 +57,21 @@ int main(int argc, char **argv)
 	for(;;) {
 		Req r = recv(mnt);
 		switch(r.fn) {
-		case MAUTH:
-			if(r.fid != 0) {
-				r.ret = -EACCES;
-				break;
-			}
-			if(r.len2 != 0) {
-				r.ret = -EACCES;
-				break;
-			}
-			break;
-		case MDEL:
-			break;
-		case MDUP:
-			r.ret = 1;
-			break;
-		case MOPEN:
-			if(r.submsg & O_EXCL)
-				r.ret = -EACCES;
-			else
-				r.ret = 0;
-			break;
-		case MSWRITE:
-			r.off = off;
-			/* FALLTHRU */
-		case MPWRITE: {
+		case MPWRITE:
+		case MSWRITE: {
+			Fid *fid = fidlookup(&fidp, r.fid);
 			size_t b;
-			a = r.off;
+			if(!(fid && fid->omode & O_WRONLY)) {
+				r.ret = -EBADF;
+				break;
+			}
+			if(fid->f == root) {
+				r.ret = -EACCES;
+				break;
+			}
+			if(r.fn == MSWRITE)
+				r.off = fid->off;
+			a = r.off % (80 * 24);
 			for(b = 0; b < r.len; b++) {
 				char c = ((char *) r.buf)[b];
 				if(c == '\n') {
@@ -115,7 +106,7 @@ int main(int argc, char **argv)
 			}
 			r.ret = b;
 			if(r.fn == MSWRITE) {
-				off = a;
+				fid->off = a;
 				outb(0x03d4, 0x0F);
 				outb(0x03d5, (uint8_t) ((a % (80 * 25)) & 0xFF));
 				outb(0x03d4, 0x0E);
@@ -123,9 +114,18 @@ int main(int argc, char **argv)
 			}
 			break;
 		}
-		case MSREAD:
-		case MPREAD: {
+		case MPREAD:
+		case MSREAD: {
+			Fid *fid = fidlookup(&fidp, r.fid);
 			int i, j = 0, err;
+			if(fid->f == root) {
+				fid->dirread = dirnext(fid->f, fid->dirread);
+				if(fid->dirread) {
+					r.ret = convD2M(&(*fid->dirread)->dir, r.buf, r.len);
+				} else
+					r.ret = 0;
+				break;
+			}
 			while(!j) {
 				if((err = read(irq1, &i, sizeof(i))) < 0) {
 					r.ret = err;
@@ -141,37 +141,30 @@ int main(int argc, char **argv)
 			r.ret = j;
 outloop:		break;
 		}
-		case MSEEK:
+		case MSEEK: {
+			Fid *fid = fidlookup(&fidp, r.fid);
+			if(!(fid && fid->omode)) {
+				r.ret = -EBADF;
+				break;
+			}
 			switch(r.submsg) {
 			case 0:
-				off = r.off;
+				fid->off = r.off;
 				break;
 			case 1:
-				off += r.off;
+				fid->off += r.off;
 				break;
 			case 2:
-				off = 80 * 25 + r.off;
+				fid->off = 80 * 25 + r.off;
 				break;
 			}
-			off %= 80 * 25;
-			r.ret = off;
+			fid->off %= 80 * 25;
+			r.ret = fid->off;
 			break;
-		case MWALK:
-			if(r.len2 != 13) {
-				r.ret = -EINVAL;
-				break;
-			}
-			if(strncmp(r.buf, "cons", r.len) != 0) {
-				r.ret = -ENOENT;
-			} else {
-				PBIT64(r.buf2, 1);
-				PBIT32((char *)r.buf2+8, 0);
-				PBIT8((char *)r.buf2+12, 0x44);
-				r.ret = 1;
-			}
-			break;
+		}
 		default:
-			exits("unknown");
+			dofunc(&r, &fidp, 0);
+			break;
 		}
 		answer(r, mnt);
 	}

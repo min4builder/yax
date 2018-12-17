@@ -1,6 +1,7 @@
 include ../config.mk
 
 BINS = cons
+LIBS = -lyaxfs
 
 all: $(BINS)
 

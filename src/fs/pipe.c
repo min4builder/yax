@@ -3,11 +3,11 @@
 #include <sys/types.h>
 #include <yax/lock.h>
 #include <yax/openflags.h>
+#include <yax/stat.h>
 #include "fs/conn.h"
 #include "fs/pipe.h"
 #include "mem/malloc.h"
 #include "multitask.h"
-#include "stat.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

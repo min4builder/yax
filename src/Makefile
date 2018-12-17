@@ -10,7 +10,7 @@ MEM = mem/malloc.o mem/pgdir.o mem/pgdirs.o mem/phys.o mem/str.o mem/user.o \
 	mem/usrboundary.o mem/virt.o
 # boot.o must be first, otherwise alphabetic order
 OBJS := boot.o exec.o $(FS) int.o main.o $(MEM) multitask.o multitasks.o pic.o \
-	pit.o printk.o ssp.o stat.o syscall.o sysentry.o
+	pit.o printk.o ssp.o syscall.o sysentry.o
 
 all: yax.bin
 

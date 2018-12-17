@@ -3,12 +3,13 @@
 #endif
 #define __YAX__
 #include <sys/types.h>
+#include <yax/errorcodes.h>
 #include <yax/openflags.h>
+#include <yax/stat.h>
 #include "fs/conn.h"
 #include "fs/printkfs.h"
 #include "mem/malloc.h"
 #include "printk.h"
-#include "stat.h"
 
 static Dev ops;
 
