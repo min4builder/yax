@@ -1,0 +1,37 @@
+.TH fd2path 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+fd2path \- return the path associated with a file descriptor
+.SH SYNOPSYS
+.BI "ssize_t fd2path(int " fd ", char *" buf ", size_t " len ");"
+.SH DESCRIPTION
+.IR fd ,
+when opened, had the rooted path through which it was opened associated with it.
+.BR fd2path ()
+recovers this path and copies it to
+.IR buf ,
+copying at most
+.I len
+bytes.
+.SH RETURN VALUE
+The length of the path, no matter how many bytes were actually copied.
+.SH ERROR CODES
+.B EINVAL
+if
+.I buf
+is not a valid writeable buffer of at least
+.I len
+bytes.
+.SH NOTE
+The path is not updated when the filesystem changes; this means that it may no
+longer point to the same file or be valid at all.
+.PP
+The behaviour is identical to that of the
+.BR strlcpy (3)
+function.
+.SH SEE ALSO
+.BR getwd (3)
+(which is implemented by opening `.' and calling
+.IR fd2path ()
+on it),
+.BR strlcpy (3)
+

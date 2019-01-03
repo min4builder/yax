@@ -1,0 +1,30 @@
+.TH "sleep, alarm" 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+sleep, alarm \- wait a given interval of time
+.SH SYNOPSYS
+.BI "void sleep(clock_t " time ");"
+.PP
+.BI "void alarm(clock_t " time ");"
+.SH DESCRIPTION
+.BR sleep ()
+blocks for a given amount of
+.I time
+(in clock ticks).
+.BR alarm ()
+asynchronously sends a note "alarm" to the process after
+.I time
+clock ticks.
+.SH NOTE
+Calling
+.BR alarm ()
+doesn't reset previously set alarms, unlike
+.SM POSIX
+behaviour.
+.PP
+A clock tick is 0.01 seconds.
+.PP
+There might be a delay between the time set and actual activation, but it will
+never be negative.
+.SH SEE ALSO
+.BR intro (2)
+

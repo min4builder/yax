@@ -1,0 +1,23 @@
+.TH munmap 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+munmap \- remove part of or a whole memory mapping from the address space
+.SH SYNOPSYS
+.BI "int munmap(void *" addr ", size_t " len ");"
+.SH DESCRIPTION
+Any memory mappings starting at
+.I addr
+and going for
+.I len
+bytes are removed. Both must be page\-aligned.
+.SH RETURN VALUE
+Always returns zero or an error.
+.SH ERROR CODES
+.B EINVAL
+if the arguments are invalid.
+.SH NOTE
+Since no mappings can be established at address zero,
+.BR munmap ()
+also cannot remove mappings there.
+.SH SEE ALSO
+.BR mmap (2)
+

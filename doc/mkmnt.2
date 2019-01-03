@@ -1,0 +1,33 @@
+.TH mkmnt 2 "December 2018" "YAX" "KERNEL INTERFACES"
+.SH NAME
+mkmnt \- create a new mount and mount\-master pair
+.SH SYNOPSYS
+.B #include <yax/stat.h>
+.PP
+.BI "int mkmnt(int *" "master" ", Qid " "qid" ");"
+.SH DESCRIPTION
+Create a new mount/mount\-master pair and write the mount\-master to
+.IR "master" "."
+.PP
+.IR "read" "()s and " "write" "()s"
+to/from the mount\-master will then communicate with a simple protocol to handle
+requests done with
+.IR "func" "()"
+on the corresponding mount.
+.PP
+.I qid
+is used as the
+.B Qid
+for the mount, for the purpose of looking up the mount table.
+.SH RETURN VALUE
+The mount (as a file descriptor), or an error value.
+.SH ERROR CODES
+Only
+.BR "ENOMEM" ","
+when memory is exhausted.
+.SH SEE ALSO
+.IR "intro" "(2),"
+.IR "open" "(2),"
+.IR "func" "(2),"
+.IR "yaxfs" "(3)"
+

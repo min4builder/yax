@@ -1,0 +1,56 @@
+.TH func 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+func \- call file server function
+.SH SYNOPSYS
+.B #include <yax/fn.h>
+.PP
+.BI "long long func(int " fd ", int " fn ", int " sub ", void *" buf ", size_t " len ", void *" buf2 ", size_t " len2 ", off_t " off ");"
+.SH DESCRIPTION
+Perform the given remote procedure call on
+.IR fd .
+.I fn
+is the function to be performed.
+.I sub
+is a general\-purpose integer.
+.I buf
+is a memory buffer with size
+.IR len ,
+that must be enabled by OR\-ing
+.B MWANTSPTR
+to
+.IR fn ,
+and is read\-only unless
+.B MWANTSWR
+is specified, in which case it is write\-only.
+.IR buf2 " and " len2
+are analogous, and so are
+.BR MWANTSPTR2 " and " MWANTSWR2 .
+.I off
+is a generic offset parameter, which must be enabled by
+.BR MWANTSOFF .
+.PP
+Unused parameters should (but need not) be set to 0.
+.SH RETURN VALUE
+The procedure call return value.
+.SH ERROR CODES
+.B EINVAL
+if any parameter is invalid.
+.PP
+May return other errors, depending on the call itself.
+.SH NOTE
+The call may block.
+.PP
+The
+.B M*
+.I fn
+predefined values are conventional only (from the client side) and a different
+protocol may be used. This is not recommended. If extra functions are needed,
+use
+.BR MIOCTL ,
+OR\-ed with the needed
+.B MWANTS*
+flags and the actual function to be performed in
+.IR sub .
+.SH SEE ALSO
+.BR mkmnt (2)
+

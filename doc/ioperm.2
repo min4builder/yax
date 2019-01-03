@@ -1,0 +1,24 @@
+.TH ioperm 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+ioperm \- request permissions for I/O port access
+.SH SYNOPSYS
+.BI "void ioperm(size_t " start ", size_t " end ", int " on ");"
+.SH DESCRIPTION
+Request that the access permission for the I/O ports
+.IR start " through " end
+be changed according to
+.I on
+.RB ( true " for access grant, " false " for access deny)."
+.SH NOTE
+This system call is not available in all platforms.
+.PP
+The I/O map is never shared between processes. When a
+.BR rfork (2)
+is done, if the address space is shared, the map is copied, otherwise it is
+cleared. This is inconsistent with the address space behaviour (share or copy
+vs. copy or clear).
+.SH BUGS
+No permission checking is done, any process may request any port.
+.PP
+The fork behaviour is braindead.
+

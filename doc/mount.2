@@ -1,0 +1,54 @@
+.TH mount 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+mount \- mount a file descriptor onto the namespace
+.SH SYNOPSYS
+.B #include <yax/mountflags.h>
+.PP
+.BI "int mount(char const *" from ", int " to ", int " flags ");"
+.SH DESCRIPTION
+If
+.I flags
+is
+.B MREPL
+(0), make it such that
+.BR open ()ing
+.I from
+returns a copy of the
+.I to
+file descriptor. If it is
+.BR MBEFORE " or " MAFTER ,
+.I from
+becomes a union mount (see below), with
+.B MBEFORE
+adding
+.I to
+at the beginning and
+.B MAFTER
+adding it at the end.
+.SS Union mounts
+A union mount contains other mount points, in sequence. When it is walked, the
+walk is attempted on each mount point in sequence, and the first to succeed is
+returned. 
+.SH RETURN VALUE
+0 on success.
+.SH ERROR CODES
+.B EINVAL
+if any parameter is invalid, as well as any error that may be returned by
+.BR open (2)ing
+.IR name .
+.SH NOTE
+.I from
+must already exist.
+.SH SEE ALSO
+.BR open (2)
+.SH BUGS
+.I from
+must already exist.
+.PP
+On directory listings of the containing directory of a mount point, the
+original file is listed instead of the mount point.
+.PP
+Only walking is implemented for union mounts; other operations are forwarded to
+the first contained mount point. This means, particularly, that directory
+listings are broken.
+

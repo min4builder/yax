@@ -1,0 +1,86 @@
+.TH mmap 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+mmap \- create and attach a new memory mapping
+.SH SYNOPSYS
+.B #include <yax/mapflags.h>
+.PP
+.BI "void *mmap(void *" addr ", size_t " len ", enum mapprot " prot ", enum mapflags " flags ", int " fd ", off_t " off ");"
+.SH DESCRIPTION
+If
+.I flags
+includes
+.BR MAP_ANONYMOUS ,
+alloc new memory, initialized to zeroes. If, on the other hand, it includes
+.BR MAP_PHYS ,
+and the process has
+.BR mem (2)
+access permission, and
+.I len
+bytes from
+.I off
+in physical memory are not reserved, map from there. Otherwise, map a view of
+the file in
+.IR fd ,
+beginning at
+.I off
+and going for
+.I len
+bytes.
+In this case, if
+.I flags
+includes
+.BR MAP_PRIVATE ,
+changes to the mapping will be not written back to the file nor be reflected on
+other mappings of the same file, and
+.IR len " and " off
+need not be multiples of the page size. The default
+.RB ( MAP_SHARED )
+is the opposite. (These flags do not apply to other kinds of maps)
+.PP
+A new memory region is created somewhere in the address space (exactly at
+.I addr
+if
+.B MAP_FIXED
+is specified in
+.IR flags )
+and the created mapping is put there with the permissions specified in
+.IR prot .
+.PP
+.IR len " and " off
+(and
+.I addr
+as well if
+.B MAP_FIXED
+is specified) must be multiples of the page size unless the mapping is a file
+mapping and
+.B MAP_PRIVATE
+has been specified. In that case, they can be anything. This feature is
+.SM YAX
+specific and supported only to simplify the implementation of
+.BR exec (),
+so it may be removed in the future without notice.
+.SH RETURN VALUE
+Returns the place at which the mapping was established, or an error casted to a
+.BR "void *" .
+This may or may not equal
+.IR addr ,
+unless
+.B MAP_FIXED
+was specified, in which case it is guaranteed to be, except in the error case.
+.SH ERROR CODES
+.BR ENOMEM ,
+if there is no address space, and
+.BR EINVAL ,
+in the case of invalid or out\-of\-range arguments.
+.SH NOTE
+No mappings can be established at the zero address.
+.SH SEE ALSO
+.BR munmap (2)
+.SH BUGS
+Checking for permissions and available memory are delayed until use, and if
+they fail, weirdness ensues.
+.PP
+.BR mem (2)
+is not implemented yet, so there is no way to check for physical memory
+permissions.
+

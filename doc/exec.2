@@ -1,0 +1,48 @@
+.TH exec 2 "December 2018" "YAX" "KERNEL INTERFACES"
+.SH NAME
+exec \- replace a process image by a new one
+.SH SYNOPSYS
+.BI "int exec(char const *" "name" ", char const *" "argv" ", char const *" "envp" ");"
+.SH DESCRIPTION
+Open the file
+.I name
+and, if it is a valid
+.SM ELF
+executable for the current architecture, create a new process memory image
+(keeping file descriptors, mount table etc., but removing all memory maps and
+note handlers) and load the file in it, according to usual
+.SM ELF
+conventions.
+.PP
+Then, call the start symbol (usually
+.IR "_start" "),"
+passing to it copies of
+.IR "argv" " and " "envp"
+strings.
+.SH RETURN VALUE
+.BR "exec" "()"
+doesn't return on success. On failure, it might return any error normally
+returned by
+.BR "open" "()"
+as well as
+.BR "ENOEXEC" "."
+.SH NOTES
+Both
+.IR "argv" " and " "envp"
+are single strings, not arrays of strings as required by
+.SM POSIX
+, so they are commonly split by the libc before being passed to the
+.BR "main" "()"
+function.
+.PP
+There is no "point of no return"; the caller will always get control back if
+.BR "exec" "()"
+fails.
+.SH SEE ALSO
+.BR "open" "(2)"
+.SH BUGS
+Interpreter strings and shebangs are not yet supported.
+.PP
+The loading code ignores anything it doesn't use, so invalid but "valid enough"
+images may be loaded.
+

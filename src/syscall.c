@@ -310,9 +310,12 @@ long long sys_func(int fd, int fn, int sub, void *buf, size_t len, void *buf2, s
 {
 	Conn *c;
 	if(fn & MWANTSPTR) {
-		if(!verusrptr(buf, len, PROT_READ | (fn & MWANTSWR ? PROT_WRITE : 0))) {
+		if(!verusrptr(buf, len, fn & MWANTSWR ? PROT_WRITE : PROT_READ))
 			return -EINVAL;
-		}
+	}
+	if(fn & MWANTSPTR2) {
+		if(!verusrptr(buf2, len2, fn & MWANTSWR2 ? PROT_WRITE : PROT_READ))
+			return -EINVAL;
 	}
 	c = FD2CONN(fd);
 	if(!c)

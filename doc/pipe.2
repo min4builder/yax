@@ -1,0 +1,32 @@
+.TH pipe 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+pipe \- create a pipe
+.SH SYNOPSYS
+.BI "int pipe(int " fds "[2]);"
+.SH DESCRIPTION
+Create a pipe and write its two ends at
+.IR fds "[0] and " fds [1].
+.SS Pipes
+A pipe answers to the
+.BR MSREAD " and " MSWRITE
+messages, as well as the standard
+.BR MSTAT " and " MOPEN .
+Anything written on one side can be read on the other.
+.SH RETURN VALUE
+0 on success.
+.SH ERROR CODES
+.B EINVAL
+if
+.I fds
+is not valid writeable memory.
+.SH NOTE
+The pipe is two\-way, unlike standard
+.SM POSIX
+and
+.SM UNIX.
+.PP
+.BR MPREAD " and " MPWRITE
+are not supported.
+.SH SEE ALSO
+.BR func (2)
+

@@ -1,0 +1,22 @@
+.TH exits 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+exits \- exit a program with an exit string
+.SH SYNOPSYS
+.BI "_Noreturn void exits(char const *" exit_status ");"
+.SH DESCRIPTION
+Quits a process with
+.I exit_status
+as the exit status. A
+.I NULL
+pointer is treated as an empty string for convenience. The status can be read
+through the parent's
+.BR proc (2)
+interface.
+.PP
+Can't fail.
+.SH RETURN VALUE
+Doesn't return.
+.SH SEE ALSO
+.BR intro (2),
+.BR proc (2)
+

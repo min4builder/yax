@@ -1,0 +1,29 @@
+.TH open 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+open \- open a file
+.SH SYNOPSYS
+.B #include <yax/openflags.h>.
+.PP
+.BI "int open(char const *" name ", enum openflags " fl "[, int " mode "]);"
+.SH DESCRIPTION
+Query the file systems for the file at
+.I name
+and open it according to the permissions in
+.I fl
+(one of
+.BR O_RDONLY ", " O_WRONLY " and " O_RDWR ,
+meaning read\-only, write\-only and read\-write, respectively).
+.SH NOTE
+The file must support the
+.B MOPEN
+message.
+.PP
+On standard file systems, directories can also be opened read\-only. Reading
+a directory returns the directory entries in the same format as
+.BR MSTAT .
+.SH SEE ALSO
+.BR close (2),
+.BR mount (2)
+.SH BUGS
+Creation not supported yet.
+

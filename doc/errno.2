@@ -1,0 +1,72 @@
+.TH errno 2 "January 2019" YAX "KERNEL INTERFACES"
+.SH NAME
+errno \- standard error codes
+.SH SYNOPSYS
+.B #include <yax/errorcodes.h>
+.SH DESCRIPTION
+Error codes must be standardised so that different processes agree on them.
+This header defines all standard error codes.
+.IP \(bu
+.B ENOSYS
+\- unimplemented function
+.IP \(bu
+.B EACCES
+\- access denied
+.IP \(bu
+.B EAGAIN
+\- try again
+.IP \(bu
+.B EBADF
+\- bad file descriptor
+.IP \(bu
+.B EINVAL
+\- invalid
+.IP \(bu
+.B EISDIR
+\- is a directory
+.IP \(bu
+.B EMFILE
+\- file descriptor too big
+.IP \(bu
+.B ENODEV
+\- no such device
+.IP \(bu
+.B ENOENT
+\- file not found
+.IP \(bu
+.B ENOEXEC
+\- not executable
+.IP \(bu
+.B ENOMEM
+\- memory exhausted
+.IP \(bu
+.B ENOTDIR
+\- not a directory
+.IP \(bu
+.B ENOTSUP
+\- not supported
+.IP \(bu
+.B ENXIO
+\- no such device
+.IP \(bu
+.B EOVERFLOW
+\- overflow
+.IP \(bu
+.B EPIPE
+\- broken pipe
+.IP \(bu
+.B ESRCH
+\- no such process
+.IP \(bu
+.B EIO
+\- I/O error
+.IP \(bu
+.B ESPIPE
+\- bad seek
+.PP
+.B MAXERR
+is also defined, as one greater than the biggest error value.
+.SH SEE ALSO
+.BR intro (2),
+.BR syscall (2)
+

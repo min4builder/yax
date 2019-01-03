@@ -1,0 +1,46 @@
+.TH rfork 2 "December 2018" "YAX" "KERNEL INTERFACES"
+.SH NAME
+rfork \- split a process or change its parameters
+.SH SYNOPSYS
+.B #include <yax/rfflags.h>
+.PP
+.BI "pid_t rfork(enum rfflags " flags ");"
+.SH DESCRIPTION
+.I flags
+is one or more of the following flags ORed together:
+.IP \(bu
+.BR RFPROC :
+create a new process, an identical copy of this one, and apply
+.I flags
+to it instead.
+.IP \(bu
+.BR RFNOWAIT :
+detach the process from the parent, so when the child dies (see
+.BR exits (2))
+the parent will not receive a wait message (see
+.BR proc (2)).
+.IP \(bu
+.BR RFNAMEG :
+copy the namespace (see
+.BR mount (2))
+instead of sharing it (as is the default).
+.IP \(bu
+.BR RFMEM :
+share the address space instead of copying it (as is the default). Needs
+.B RFPROC
+to be set as well.
+.IP \(bu
+.BR RFFDG :
+copy the file descriptors instead of sharing them (as is the default).
+.SH RETURN VALUE
+When
+.B RFPROC
+is given, return 0 to the child and the child's process id to the parent.
+Otherwise, return 0.
+.SH BUGS
+.RB Non\- RFPROC
+arguments are not yet supported.
+.PP
+.B RFMEM
+has a stupid and incorrect implementation.
+

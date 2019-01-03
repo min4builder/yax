@@ -1,0 +1,46 @@
+.TH syscall 2 "January 2019" YAX "KERNEL INTERFACES"
+.SH NAME
+syscall \- how to do a system call on x86
+.SH SYNOPSYS
+.IP
+.B ; (push parameters)
+.IP
+.B push (syscall number)
+.IP
+.B mov edx, .1
+.IP
+.B mov ecx, esp
+.IP
+.B syscall
+.PP
+.B .1:
+.SH DESCRIPTION
+To do an x86 system call, the
+.B syscall
+instruction is used. On processors that don't support it, it is emulated. The
+calling convention is standard System V calling convention, except with a
+.B syscall
+instruction in place of the
+.BR call ,
+and with
+.B ecx
+containing the saved
+.B esp
+value, and
+.B edx
+the return location.
+.PP
+The first parameter is the system call number, and the rest are its arguments.
+.SH RETURN VALUE
+The return value (on
+.BR eax ,
+like the convention mandates) is the return value of the system call. By
+convention, if it is >
+.RB - MAXERR
+and < 0, it is a negated error code.
+.SH SEE ALSO
+.BR errno (2),
+.BR intro (2)
+.SH BUGS
+No 64\-bit return values are possible without tricks.
+

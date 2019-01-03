@@ -66,6 +66,8 @@ void _Yalcassert(int, const char *, const char *);
 _YALCTYPESZ(blkcnt_t, long long);
 _YALCTYPESZ(blksize_t, long long);
 _YALCTYPESZ(clock_t, long long);
+_YALCTYPESZ(FILE, struct { int fd; });
+_YALCTYPESZ(fpos_t, long long);
 _YALCTYPESZ(gid_t, long);
 _YALCTYPESZ(id_t, long);
 _YALCTYPESZ(mode_t, int);

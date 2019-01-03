@@ -1,0 +1,167 @@
+.TH intro 2 "January 2019" YAX "KERNEL INTERFACES"
+.SH NAME
+intro \- introduction to kernel interfaces
+.SH DESCRIPTION
+.SM YAX
+is a microkernel designed to support a full
+.SM UNIX\-like
+environment, while having most functionality implemented in user\-mode.
+This section describes its external interfaces.
+.SS Booting
+The
+.SM YAX
+kernel image must be booted by a multiboot 1 compatible bootloader, with a
+single module, which must be an executable image. After internal initialization
+is done, the executable is loaded in memory as process 1.
+.PP
+This executable (conventionally called \*(lqinitrd\*(rq for historical reasons,
+even though it is not technically a ramdisk) will, most commonly, mount an
+internal ramdisk and run other programs from it, to setup the hard disk,
+peripherals and so on. A such \*(lqinitrd\*(rq is included with the kernel.
+.SS Interrupts
+CPU traps and faults are either handled by the kernel or generate notes (see
+below) to the faulting program. They can be caught and treated by the program.
+.PP
+Hardware interrupts are counted internally. Their count may be read through
+.BR iofs (2).
+.PP
+Software interrupts always generate notes.
+.SS Processes
+A process is a thread of control. All processes have a
+.IR "process id" ,
+which is an unique positive integer other than 0. They also have, conceptually,
+an address space (see Memory below), a namespace (see below) and may have a
+note handler (see Notes below).
+.PP
+The system calls associated with process management are:
+.IP \(bu
+.BR alarm ()
+\- see
+.BR sleep (2)
+.IP \(bu
+.BR exits (2)
+.IP \(bu
+.BR ioperm (2)
+.IP \(bu
+.BR rfork (2)
+.IP \(bu
+.BR sleep (2)
+.SS Notes
+Every process may have a \*(lqnote handler\*(rq, which is a function of the
+form:
+.IP
+.BI "void note_handler(char const *" note ", void const *" status ");"
+,
+.PP
+where
+.I note
+is a string representing the exception to be handled and
+.I status
+is a platform\-specific structure containing the registers at the moment the
+note was received.
+.PP
+This handler is executed on a newly\-allocated stack, and must not return.
+Instead, it must call
+.BR noted (2)
+to return control to where it was before (which may even be inside the kernel).
+.PP
+If no handler is present when a note is received, the process will exit with
+the note string as exit status.
+.PP
+The system calls associated with note management are:
+.IP \(bu
+.BR noted (2)
+.IP \(bu
+.BR notify (2)
+.SS Memory
+Process memory is mapped through an \*(lqaddress space\*(rq, which is composed
+of a set of \*(lqmappings\*(rq, and these are regions of memory with common
+properties (like being mapped to a file or zero\-initialized).
+.PP
+Address 0 is never mapped. It is illegal to attempt to do it.
+.PP
+The system calls associated with memory management are:
+.IP \(bu
+.BR exec (2)
+.IP \(bu
+.BR mmap (2)
+.IP \(bu
+.BR munmap (2)
+.SS Namespaces
+Resources in
+.SM YAX
+are exposed through
+.I file descriptors
+(see below), and those are named through a mapping called
+.IR namespace .
+It is normally a hierarchical structure, but can be any rooted graph.
+.PP
+Any object (\*(lqfile\*(rq)
+in a namespace may be referred to by a \*(lqpath name\*(rq,
+which has the form
+.IP
+.B /a/b/c/.../z
+.PP
+where a, b, c, ..., z are arbitrary strings not containing null or `/'
+characters. The path means \*(lqstarting from the root, walk through a, b, c, ...,
+z in that order and yield the resulting file\*(rq.
+.PP
+There is a convenience notation, made by omitting the first `/', that instead
+of starting from the root, starts from a user\-set \*(lqworking directory\*(rq.
+.PP
+Most kernel and userland services are available through filesystems, which are
+file trees that are attached to the namespace with
+.BR mount ().
+.PP
+The system calls associated with namespace management are:
+.IP \(bu
+.BR chdir (2)
+.IP \(bu
+.BR mount (2)
+.IP \(bu
+.BR open (2)
+.SS File descriptors
+A
+.I file descriptor
+is a small, sequentially assigned positive integer, that serves as a handle to
+a communication channel with the kernel or another process. It is a system of
+remote procedure calls, done through
+.BR func (2).
+.PP
+The system calls associated with file descriptor management are:
+.IP \(bu
+.BR close (2)
+.IP \(bu
+.BR dup2 (2)
+.IP \(bu
+.BR fd2path (2)
+.IP \(bu
+.BR func (2)
+.IP \(bu
+.BR mkmnt (2)
+.IP \(bu
+.BR pipe (2)
+.SH DIAGNOSTICS
+Every system call that may return an error returns it as a negated
+.BR errno (2)
+value.
+.SH SEE ALSO
+.BR syscall (2),
+the system calls listed above
+.SH BUGS
+.BR umount ()
+is missing.
+.PP
+.BR chdir ()
+should be implemented in userland.
+.PP
+.BR sleep "() and " alarm ()
+are not general enough.
+.PP
+Proper page fault handling is not implemented.
+.PP
+Most processor faults and traps result in kernel panics.
+.PP
+Address 0 is invalid, which is incompatible with
+.SM POSIX.
+

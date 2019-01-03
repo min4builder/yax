@@ -1,0 +1,28 @@
+.TH notify 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+notify \- set note handler
+.SH SYNOPSYS
+.BI "void (*notify(void (*" newh ")(void *, char const *)))(void *, char const *);"
+.PP
+or
+.PP
+.B typedef void note_handler(void *, char const *);
+.PP
+.BI "note_handler *notify(note_handler *" newh ");"
+.SH DESCRIPTION
+Set the process' note handler to
+.IR newh .
+When a note arrives, the note handler is called with a platform\-specific
+struct with the registers at the time the note arrived as well as the note
+string itself. The handler must not return; instead it should call
+.BR noted (2).
+.SH RETURN VALUE
+The previously set note handler, or
+.SM NULL
+if there was none.
+.SH ERROR CODES
+None.
+.SH SEE ALSO
+.BR intro (2),
+.BR noted (2)
+

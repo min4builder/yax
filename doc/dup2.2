@@ -1,0 +1,26 @@
+.TH dup2 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+dup2 \- duplicate a file descriptor
+.SH SYNOPSYS
+.BI "int dup2(int " from ", int " to ");"
+.SH DESCRIPTION
+Set up the file descriptor
+.I to
+(or a newly allocated one if it is negative) to be the same as
+.IR from .
+Closes
+.I to
+if it is open.
+.SH RETURN VALUE
+Returns
+.IR to .
+.SH ERROR CODES
+.B EINVAL
+if
+.I from
+is invalid, or
+.I to
+is positive but invalid.
+.SH BUGS
+The file descriptor should be a copy, not the same one.
+

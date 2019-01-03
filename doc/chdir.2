@@ -1,0 +1,14 @@
+.TH chdir 2 "December 2018" YAX "KERNEL INTERFACES"
+.SH NAME
+chdir \- change current directory
+.SH SYNOPSYS
+.BI "void chdir(char const *" name ");"
+.SH DESCRIPTION
+Change the current working directory to
+.IR name .
+It must be a valid directory.
+.SH ERROR CODES
+None. No-op on failure.
+.SH BUGS
+Can't check for failure.
+
