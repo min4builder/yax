@@ -14,6 +14,8 @@ too many bugs and missing features on the kernel (also the code is a mess), but
 it already manages memory, multitasks and has a VFS. See src/STATUS for an
 overview.
 
+There is documentation available as man pages in the `doc/` directory.
+
 ## How to compile
 
     ./configure
