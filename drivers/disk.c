@@ -145,7 +145,7 @@ int main()
 	print(fd, "HD 0 found\n");
 
 	root = dirnew((Dir) { { QTDIR, 0, 0 }, DMDIR | 0555, 0, 0, 0, "/", "", "", "" });
-	diraddfile(root, filenew((Dir) { { QTTMP, 1, 0 }, DMTMP | 0660, 0, 0, drvinfo[60] + (uint32_t) drvinfo[61] << 16, "hd0", "", "", "" }, 0, 0));
+	diraddfile(root, filenew((Dir) { { QTTMP, 1, 0 }, DMTMP | 0660, 0, 0, drvinfo[60] + ((uint32_t) drvinfo[61] << 16), "hd0", "", "", "" }, 0, 0));
 
 	fidadd(&fds, fidnew(root, 0));
 

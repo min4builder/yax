@@ -9,12 +9,15 @@ Linux for me to be able to make a fully-fledged system without having to
 reinvent the wheel too much.
 
 ## Current status
-It doesn't do much by now, I'm still working on the libc and there are likely
-too many bugs and missing features on the kernel (also the code is a mess), but
-it already manages memory, multitasks and has a VFS. See src/STATUS for an
-overview.
+The libc is very incomplete.
 
-There is documentation available as man pages in the `doc/` directory.
+There are very few drivers; not even a proper disk filesystem is in place yet.
+
+The kernel works, and is actually quite complete, but there are a few features
+missing and some of the code is rather messy.
+
+There is documentation available as man pages in the `doc/` directory (for the
+kernel only, currently). It is mostly complete.
 
 ## How to compile
 
@@ -33,5 +36,8 @@ Then, `make test` for a qemu-based test run.
 All code I wrote is under the (Expat) MIT license (previously public domain).
 Code not written by me:
 
- - liballoc was under the public domain; this version relicensed to MIT
+ - liballoc is under the public domain.
+   It is at `src/mem/malloc.[ch]` and `libc/malloc.[ch]`
+ - vfprintf was taken from the Sortix libc; it is under ISC.
+   It is at `libc/stream/vfprintf.c`
 

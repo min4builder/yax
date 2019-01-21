@@ -1,6 +1,8 @@
 #ifndef _LIBALLOC_H
 #define _LIBALLOC_H
 
+#define __YAX__
+
 #include <sys/mman.h>
 #include <yax/lock.h>
 

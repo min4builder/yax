@@ -1,3 +1,4 @@
+#define __YAX__
 #include <stdlib.h>
 #include <yaxfs/fid.h>
 

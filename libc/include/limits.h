@@ -31,10 +31,13 @@
 
 #endif /* _LIMITS_H_ANSI */
 
-#if !defined(_LIMITS_H_YAX) && _YALC_NEED_YAX
-#define _LIMITS_H_YAX
+#if !defined(_LIMITS_H_POSIX) && _YALC_NEED_POSIX
+#define _LIMITS_H_POSIX
 
-#define PAGE_SIZE 4096
+#define PAGESIZE 4096
+#define PAGE_SIZE PAGESIZE
+#define PATH_MAX 4096
+#define SSIZE_MAX LONG_MAX
 
-#endif /* _LIMITS_H_YAX */
+#endif /* _LIMITS_H_POSIX */
 

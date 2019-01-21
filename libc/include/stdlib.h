@@ -7,9 +7,13 @@ _YALCDEFTYPE(size_t);
 _YALCDEFTYPE(wchar_t);
 
 void abort(void);
+int abs(int);
+_Noreturn void exit(int);
+void free(void *);
 void *malloc(size_t);
 void *realloc(void *, size_t);
-void free(void *);
+long strtol(char const *__restrict, char **__restrict, int);
+long long strtoll(char const *__restrict, char **__restrict, int);
 
 #endif /* _STDLIB_H_ANSI */
 

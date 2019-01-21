@@ -1,3 +1,7 @@
+#ifndef __YAX__
+#error "Declare your use of __YAX__ before using YAX-specific headers"
+#endif
+
 #ifndef _YAX_LOCK_H
 #define _YAX_LOCK_H
 

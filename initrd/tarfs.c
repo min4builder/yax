@@ -1,4 +1,4 @@
-#define _BSD_SOURCE
+#define __YAX__
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>

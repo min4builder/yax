@@ -1,5 +1,9 @@
-#ifndef _YAX_MOUNT_H
-#define _YAX_MOUNT_H
+#ifndef __YAX__
+#error "Declare your use of __YAX__ before using YAX-specific headers"
+#endif
+
+#ifndef YAX_MOUNT_H_
+#define YAX_MOUNT_H_
 
 #include <yax/mountflags.h>
 #include <yax/stat.h>
@@ -8,5 +12,5 @@ int mkmnt(int *, Qid);
 int mount(const char *, int, int);
 int __getprintk(void);
 
-#endif /* _YAX_MOUNT_H */
+#endif /* YAX_MOUNT_H_ */
 

@@ -1,3 +1,4 @@
+#define __YAX__
 #include <codas/ref.h>
 #include <yax/lock.h>
 

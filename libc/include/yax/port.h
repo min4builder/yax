@@ -1,3 +1,7 @@
+#ifndef __YAX__
+#error "Declare your use of __YAX__ before using YAX-specific files"
+#endif
+
 #ifndef YAX_PORT_H_
 #define YAX_PORT_H_
 

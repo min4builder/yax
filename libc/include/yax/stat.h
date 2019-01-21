@@ -1,10 +1,13 @@
+#ifndef __YAX__
+#error "Declare your use of __YAX__ before using YAX-specific headers"
+#endif
+
 #ifndef _YAX_STAT_H
 #define _YAX_STAT_H
 
 #include <stdint.h>
 #include <sys/types.h>
 #include <codas/macro.h>
-#include <yax/stat.h>
 
 #if UINTPTR_MAX == 0xffffffff
 #define GBITPTR(b) ((void *) GBIT32(b))

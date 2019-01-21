@@ -8,21 +8,26 @@ extern "C" {
 #define _STRING_H_ANSI
 
 #ifndef NULL
-#define NULL _YaclNULL
+#define NULL _YalcNULL
 #endif
 
 _YALCDEFTYPE(size_t);
 
-int memcmp(const void *, const void *, size_t);
-void *memcpy(void *__restrict, const void *__restrict, size_t);
-void *memmove(void *, const void *, size_t);
-void *memset(void *, int c, size_t);
-char *strcat(char *, const char *);
-int strcmp(const char *, const char *);
+int memcmp(const void *, void const *, size_t);
+void *memcpy(void *__restrict, void const *__restrict, size_t);
+void *memmove(void *, void const *, size_t);
+void *memset(void *, int, size_t);
+char *strcat(char *, char const *);
+char *strchr(char const *, int);
+int strcmp(char const *, char const *);
 char *strcpy(char *__restrict, const char *__restrict);
-size_t strlen(const char *);
-char *strncat(char *__restrict, const char *__restrict, size_t);
-int strncmp(const char *, const char *, size_t);
+size_t strcspn(char const *, char const *);
+char *strerror(int);
+size_t strlen(char const *);
+char *strncat(char *__restrict, char const *__restrict, size_t);
+int strncmp(char const *, char const *, size_t);
+char *strrchr(char const *, int);
+char *strstr(char const *, char const *);
 
 #endif /* _STRING_H_ANSI */
 

@@ -16,6 +16,7 @@
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
 
+_YALCDEFTYPE(mode_t);
 _YALCDEFTYPE(size_t);
 _YALCDEFTYPE(ssize_t);
 _YALCDEFTYPE(uid_t);
@@ -25,16 +26,23 @@ _YALCDEFTYPE(pid_t);
 
 extern char **environ;
 
+int chdir(char const *);
+int chown(char const *, uid_t, gid_t);
 int close(int);
+int creat(char const *, mode_t);
 int dup2(int, int);
-int execve(const char *, char *const[], char *const[]);
+int execve(char const *, char *const[], char *const[]);
 _Noreturn void _exit(int);
 _Noreturn void exit(int);
 pid_t fork(void);
+int isatty(int);
+int lchown(char const *, uid_t, gid_t);
 off_t lseek(int, off_t, int);
 ssize_t read(int, void *, size_t);
-ssize_t write(int, const void *, size_t);
-int chdir(const char *);
+ssize_t readlink(char const *__restrict, char *__restrict, size_t);
+int symlink(char const *, char const *);
+int unlink(char const *);
+ssize_t write(int, void const *, size_t);
 
 #endif /* _UNISTD_H_POSIX */
 

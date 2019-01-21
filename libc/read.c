@@ -1,3 +1,5 @@
+#define __YAX__
+#include <sys/types.h>
 #include <unistd.h>
 #include <yax/func.h>
 

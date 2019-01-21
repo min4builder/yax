@@ -1,7 +1,7 @@
 global _start:function (_start.end - _start)
 extern _init
 extern exits
-extern _libc_main
+extern _YALCmain
 
 section .text
 _start:
@@ -13,7 +13,7 @@ _start:
 	push edi
 	push esi
 	call _init
-	call _libc_main
+	call _YALCmain
 	push 0
 	call exits
 .end:
