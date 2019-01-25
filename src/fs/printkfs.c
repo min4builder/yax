@@ -2,10 +2,10 @@
 #undef NDEBUG
 #endif
 #define __YAX__
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <yax/errorcodes.h>
 #include <yax/openflags.h>
-#include <yax/stat.h>
 #include "fs/conn.h"
 #include "fs/printkfs.h"
 #include "mem/malloc.h"
@@ -15,9 +15,8 @@ static Dev ops;
 
 Conn *printkfsnew(void)
 {
-	Qid qid = { 0x44, 0, 0 };
 	Conn *c = calloc(1, sizeof(*c));
-	conninit(c, "<internal kernel printk>", qid, &ops, 0);
+	conninit(c, "<internal kernel printk>", 0, &ops, 0);
 	return c;
 }
 
@@ -39,16 +38,16 @@ static long long fn(Conn *c, int fn, int submsg, void *buf, size_t len, void *bu
 		return len;
 	}
 	case MSTAT: {
-		Dir d = { { 0x44, 0, 0 }, 0x44000100, 0, 0, 0, "", "", "", "" };
-		return convD2M(&d, buf, len);
+		struct stat st = { .st_ino = 0, .st_mode = S_IFIFO | 0200 };
+		return YAXstat2msg(&st, buf, len);
 	}
 	case MOPEN: {
 		if(submsg & (O_EXCL | O_TRUNC))
-			return -1;
+			return -EACCES;
 		return 0;
 	}
 	default:
-		return -EINVAL;
+		return -ENOSYS;
 	}
 	(void) c, (void) buf2, (void) len2, (void) off;
 }

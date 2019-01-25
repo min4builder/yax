@@ -1,8 +1,8 @@
 #define __YAX__
 #include <string.h>
 #include <codas/bit.h>
+#include <sys/stat.h>
 #include <yax/openflags.h>
-#include <yax/stat.h>
 #include "fs/conn.h"
 #include "fs/mnt.h"
 #include "mem/malloc.h"
@@ -53,20 +53,19 @@ static void sendmsg(Server *s, Msg *m)
 static Dev sops;
 static Dev cops;
 
-Conn *mntnew(Conn **master, Qid rq)
+Conn *mntnew(Conn **master)
 {
 	Server *s = calloc(1, sizeof(*s));
 	Client *root = calloc(1, sizeof(*root));
-	Qid qid = { 0x44, 0, 0 };
 	if(!s || !root)
 		return 0;
-	conninit((Conn *)s, "", qid, &sops, s);
+	conninit((Conn *)s, "", 0, &sops, s);
 	seminit(&s->ready, 0);
 	seminit(&s->hasmsg, 0);
 	s->msgs = 0;
 	s->read = 0;
 	*master = (Conn *) s;
-	conninit((Conn *)root, "", rq, &cops, s);
+	conninit((Conn *)root, "", 0, &cops, s);
 	root->s = s;
 	root->fid = 0;
 	ref(s); /* TODO every client has a reference; might not be a good idea */
@@ -179,16 +178,16 @@ static long long sfn(Conn *c, int fn, int submsg, void *buf_, size_t len, void *
 		return len;
 	}
 	case MSTAT: {
-		Dir d = { { 0x44, 0, 0 }, 0x44000180, 0, 0, 0, "", "", "", "" };
-		return convD2M(&d, buf_, len);
+		struct stat st = { .st_ino = 0, .st_mode = S_IFIFO | 0600 };
+		return YAXstat2msg(&st, buf_, len);
 	}
 	case MOPEN: {
 		if(submsg & (O_EXCL | O_TRUNC))
-			return -1;
+			return -EACCES;
 		return 0;
 	}
 	default:
-		return -EINVAL;
+		return -ENOSYS;
 	}
 	(void) buf2, (void) len2, (void) off;
 }
@@ -212,7 +211,7 @@ static Conn *cdup(Conn *c_)
 {
 	Client *c = (Client *) c_;
 	Client *newc = calloc(1, sizeof(*newc));
-	conninit((Conn *)newc, c_->name->s, c->c.qid, &cops, c->s);
+	conninit((Conn *)newc, c_->name->s, c->c.ino, &cops, c->s);
 	newc->s = c->s;
 	ref(newc->s);
 	newc->fid = cfn(c_, MDUP, 0, 0, 0, 0, 0, 0);

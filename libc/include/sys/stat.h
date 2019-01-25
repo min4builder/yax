@@ -54,15 +54,16 @@ struct stat {
 	ino_t st_ino;
 	mode_t st_mode;
 	off_t st_size;
-	uid_t st_uid;
-	gid_t st_gid;
-	dev_t st_rdev;
 	struct timespec st_atim;
 	struct timespec st_mtim;
 	struct timespec st_ctim;
+	uid_t st_uid;
+	gid_t st_gid;
+	dev_t st_rdev;
 };
 
 int chmod(char const *, mode_t);
+int fstat(int, struct stat *);
 int lstat(char const *__restrict, struct stat *__restrict);
 int mkdir(char const *, mode_t);
 int mkfifo(char const *, mode_t);
@@ -72,6 +73,20 @@ mode_t umask(mode_t);
 int utimensat(int, char const *, struct timespec const[2], int);
 
 #endif /* _SYS_STAT_H */
+
+#if !defined(_SYS_STAT_H_YAX) && defined(_YALC_NEED_YAX)
+#define _SYS_STAT_H_YAX
+
+_YALCDEFTYPE(size_t);
+
+#define STATMSGSIZ 44
+
+int fwstat(int, struct stat const *);
+
+size_t YAXstat2msg(struct stat const *__restrict, char *__restrict, size_t);
+void YAXmsg2stat(char const *__restrict, struct stat *__restrict);
+
+#endif /* _SYS_STAT_H_YAX */
 
 #ifdef __cplusplus
 }

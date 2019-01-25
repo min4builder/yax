@@ -61,7 +61,7 @@ void dumpregs(Regs *r)
 void int_handler(Regs *r, uint8_t n, uint32_t err)
 {
 	if(n >= 0x20 && n < 0x30) {
-		iofsinterrupt(n - 0x20);
+		/*iofsinterrupt(n - 0x20);*/
 		return;
 	}
 	if(n == 8) {
@@ -126,7 +126,7 @@ void kernel_main(MultibootInfo *mbinfo)
 	/* no need for these anymore */
 	for(i = (uintptr_t) mod.start; i <= (uintptr_t) mod.end; i += PGLEN)
 		ppgfree(i);
-	vfsmount("/", iofsnew(), 0); /* TODO check for errors and stuff */
+	/*vfsmount("/", iofsnew(), 0); *//* TODO check for errors and stuff */
 	usermode(code, (void *) err);
 }
 

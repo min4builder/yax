@@ -17,7 +17,7 @@ static void cfree(const RefCounted *rc)
 	unref(c->name);
 	c->dev->del(c);
 }
-void conninit(Conn *c, const char *name, Qid qid, Dev *dev, void *inst)
+void conninit(Conn *c, const char *name, ino_t ino, Dev *dev, void *inst)
 {
 	size_t namelen = strlen(name);
 	char *nname;
@@ -25,7 +25,7 @@ void conninit(Conn *c, const char *name, Qid qid, Dev *dev, void *inst)
 	nname = malloc(namelen + 1);
 	memcpy(nname, name, namelen + 1);
 	c->name = strmk(nname);
-	c->qid = qid;
+	c->ino = ino;
 	c->dev = dev;
 	c->inst = inst;
 }
@@ -73,12 +73,10 @@ long long connfuncpp(Conn *c, int f, int sf, void *buf, size_t len, void *buf2, 
 	}
 	printk("}");
 	if(f == MWALK) {
-		char walk[13];
+		char walk[8];
 		long long ret = c->dev->f(c, f, sf, buf, len, walk, sizeof walk, off);
 		if(ret >= 0) {
-			c->qid.type = walk[0];
-			c->qid.vers = GBIT32(walk+1);
-			c->qid.path = GBIT64(walk+5);
+			c->ino = GBIT64(walk);
 		}
 		return ret;
 	}

@@ -60,7 +60,7 @@ static ssize_t dread(Fid *fid, void *buf, size_t len, off_t off)
 {
 	int err;
 	off_t lba = off / BPSEC;
-	int d = fid->f->dir.qid.path - 1;
+	int d = fid->f->st.st_ino - 1;
 	int iobase = 0x1f0;
 	int cbase = 0x3f6;
 	outb(iobase+RDRV, (d == 0 ? D0 : D1) | DLBA | ((lba >> 24) & 0xf));
@@ -84,7 +84,7 @@ static ssize_t dwrite(Fid *fid, void const *buf, size_t len, off_t off)
 {
 	int err;
 	off_t lba = off / BPSEC;
-	int d = fid->f->dir.qid.path - 1;
+	int d = fid->f->st.st_ino - 1;
 	int iobase = 0x1f0;
 	int cbase = 0x3f6;
 	outb(iobase+RDRV, (d == 0 ? D0 : D1) | DLBA | ((lba >> 24) & 0xf));
@@ -113,8 +113,7 @@ int main()
 	int iobase = 0x1F0;
 	int cbase = 0x3F6;
 	int srv;
-	Qid qid = { 0, 0, 0 };
-	int fd = mkmnt(&srv, qid);
+	int fd = mkmnt(&srv, 0);
 	mount("/dev", fd, MBEFORE);
 	close(fd);
 	fd = __getprintk();
@@ -144,8 +143,8 @@ int main()
 	write(fd, drvinfo, sizeof(drvinfo));
 	print(fd, "HD 0 found\n");
 
-	root = dirnew((Dir) { { QTDIR, 0, 0 }, DMDIR | 0555, 0, 0, 0, "/", "", "", "" });
-	diraddfile(root, filenew((Dir) { { QTTMP, 1, 0 }, DMTMP | 0660, 0, 0, drvinfo[60] + ((uint32_t) drvinfo[61] << 16), "hd0", "", "", "" }, 0, 0));
+	root = dirnew((struct stat) { .st_ino = 0, .st_mode = S_IFDIR | 0555, .st_size = 0 }, "/");
+	diraddfile(root, filenew((struct stat) { .st_ino = 1, .st_mode = S_IFBLK | 0660, .st_size = drvinfo[60] + ((uint32_t) drvinfo[61] << 16) }, "hd0", 0, 0));
 
 	fidadd(&fds, fidnew(root, 0));
 

@@ -1,6 +1,6 @@
 #include <_yalc.h>
 
-#if !defined(_LIBGEN_H) && defined(_YALC_WANT_POSIX)
+#if !defined(_LIBGEN_H) && defined(_YALC_NEED_POSIX)
 #define _LIBGEN_H
 
 char *basename(char *);

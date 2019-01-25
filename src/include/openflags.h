@@ -9,7 +9,8 @@ enum openflags {
 	O_TRUNC = 4,
 	O_CLOEXEC = 8,
 	O_CREAT = 16,
-	O_EXCL = 32
+	O_EXCL = 32,
+	O_PATH = 64
 };
 
 #endif /* _YAX_OPENFLAGS_H */

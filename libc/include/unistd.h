@@ -1,5 +1,9 @@
 #include <_yalc.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #if !defined(_UNISTD_H_POSIX) && _YALC_NEED_POSIX
 #define _UNISTD_H_POSIX
 
@@ -34,12 +38,14 @@ int dup2(int, int);
 int execve(char const *, char *const[], char *const[]);
 _Noreturn void _exit(int);
 _Noreturn void exit(int);
+int fchown(int, uid_t, gid_t);
 pid_t fork(void);
 int isatty(int);
 int lchown(char const *, uid_t, gid_t);
 off_t lseek(int, off_t, int);
 ssize_t read(int, void *, size_t);
 ssize_t readlink(char const *__restrict, char *__restrict, size_t);
+int rmdir(char const *);
 int symlink(char const *, char const *);
 int unlink(char const *);
 ssize_t write(int, void const *, size_t);
@@ -57,4 +63,8 @@ _Noreturn void exits(const char *);
 pid_t rfork(int);
 
 #endif /* _UNISTD_H_YAX */
+
+#ifdef __cplusplus
+}
+#endif
 

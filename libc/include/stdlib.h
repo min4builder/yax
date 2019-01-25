@@ -8,10 +8,13 @@ _YALCDEFTYPE(wchar_t);
 
 void abort(void);
 int abs(int);
+void *bsearch(void const *, void const *, size_t, size_t, int (*)(void const *, void const *));
+void *calloc(size_t, size_t);
 _Noreturn void exit(int);
 void free(void *);
 void *malloc(size_t);
 void *realloc(void *, size_t);
+double strtod(char const *__restrict, char **__restrict);
 long strtol(char const *__restrict, char **__restrict, int);
 long long strtoll(char const *__restrict, char **__restrict, int);
 

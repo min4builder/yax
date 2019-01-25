@@ -91,7 +91,7 @@ char *nameclean(const char *name)
 static int qideq(Conn *a, Conn *b)
 {
 	return a == b || (a && b && a->dev == b->dev && a->inst == b->inst
-		&& a->qid.path == b->qid.path && a->qid.vers == b->qid.vers);
+		&& a->ino == b->ino);
 }
 
 Conn *vfsgetfid(const char *name, int nolastwalk)
@@ -126,7 +126,7 @@ Conn *vfsgetfid(const char *name, int nolastwalk)
 		}
 		tmp = name;
 		while(*tmp && *tmp != '/') tmp++;
-		if(m && name[0] && !nolastwalk && (err = connfunc(m, MWALK, 0, (char *)name, tmp - name, 0)) < 0) {
+		if(m && name[0] && !nolastwalk && (err = connfunc(m, MWALK, 0, (char *) name, tmp - name, 0)) < 0) {
 			if(!mount)
 				goto bailclose;
 			unref(m);
@@ -166,7 +166,7 @@ Conn *vfsopen(const char *name, enum openflags fl, int mode)
 	c = vfsgetfid(name, !!(fl & O_CREAT));
 	uxprintk((uintptr_t) c);
 	printk("]\n");
-	if(PTRERR(c))
+	if(PTRERR(c) || (fl & O_PATH))
 		return c;
 	if((err = connfunc(c, MOPEN, fl | (mode << 16), 0, 0, 0)) < 0) {
 		return ERR2PTR(err);

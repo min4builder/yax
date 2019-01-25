@@ -125,12 +125,12 @@ bail:
 	return ret;
 }
 
-int sys_mkmnt(int *master, Qid qid)
+int sys_mkmnt(int *master)
 {
 	Conn *root, *m;
 	if(!verusrptr(master, sizeof(*master), PROT_WRITE))
 		return -EINVAL;
-	root = mntnew(&m, qid);
+	root = mntnew(&m);
 	if(!root)
 		return -EIO;
 	*master = fdalloc(m);

@@ -3,16 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <yax/errorcodes.h>
-#include <yax/stat.h>
 #include <codas/bit.h>
 #include <yaxfs/dofunc.h>
 #include <yaxfs/fid.h>
 #include <yaxfs/file.h>
 #include <yaxfs/serve.h>
 
-void dofunc(Req *r, Fidpool *fidp, Func *fs)
+void dofunc(Req *r, Fidpool *fp, Func *fs)
 {
-	Fid *fid = fidlookup(fidp, r->fid);
+	Fid *fid = fidlookup(fp, r->fid);
 	if(!fid) {
 		r->ret = -EBADF;
 		return;
@@ -23,20 +22,29 @@ void dofunc(Req *r, Fidpool *fidp, Func *fs)
 		r->ret = -EACCES;
 		break;
 	case MDEL:
-		fidrem(fidp, r->fid);
+		fidrem(fp, r->fid);
 		fiddel(fid);
 		r->ret = 0;
 		break;
 	case MDUP: {
 		Fid *nfid = malloc(sizeof *nfid);
 		memcpy(nfid, fid, sizeof *fid);
-		r->ret = fidadd(fidp, nfid);
+		r->ret = fidadd(fp, nfid);
 		break;
 	}
+	default:
+		deffunc(r, fid, fs);
+		break;
+	}
+}
+
+void deffunc(Req *r, Fid *fid, Func *fs)
+{
+	switch(r->fn) {
 	case MOPEN:
-		if(r->submsg & O_RDONLY && !(fid->f->dir.mode & 0400))
+		if(r->submsg & O_RDONLY && !(fid->f->st.st_mode & 0400))
 			r->ret = -EACCES;
-		else if(r->submsg & O_WRONLY && !(fid->f->dir.mode & 0200))
+		else if(r->submsg & O_WRONLY && !(fid->f->st.st_mode & 0200))
 			r->ret = -EACCES;
 		else {
 			fid->omode = r->submsg;
@@ -45,7 +53,7 @@ void dofunc(Req *r, Fidpool *fidp, Func *fs)
 		break;
 	case MPWRITE:
 		if(!(fid->omode & O_WRONLY)) {
-			r->ret = -EBADF;
+			r->ret = -EACCES;
 			break;
 		}
 		if(fs->pwrite)
@@ -60,7 +68,7 @@ void dofunc(Req *r, Fidpool *fidp, Func *fs)
 		break;
 	case MSWRITE:
 		if(!(fid->omode & O_WRONLY)) {
-			r->ret = -EBADF;
+			r->ret = -EACCES;
 			break;
 		}
 		if(fs->write)
@@ -113,7 +121,7 @@ void dofunc(Req *r, Fidpool *fidp, Func *fs)
 			r->ret = fid->off += r->off;
 			break;
 		case 2:
-			r->ret = fid->off = fid->f->dir.length + r->off;
+			r->ret = fid->off = fid->f->st.st_size + r->off;
 			break;
 		default:
 			r->ret = -EINVAL;
@@ -126,7 +134,7 @@ void dofunc(Req *r, Fidpool *fidp, Func *fs)
 			r->ret = -EINVAL;
 			break;
 		}
-		if(!(fid->f->dir.qid.type & QTDIR)) {
+		if(!(fid->f->st.st_mode & S_IFDIR)) {
 			r->ret = -ENOTDIR;
 			break;
 		}
@@ -135,15 +143,13 @@ void dofunc(Req *r, Fidpool *fidp, Func *fs)
 			r->ret = -ENOENT;
 		else {
 			fid->f = new;
-			PBIT64(r->buf2, new->dir.qid.path);
-			PBIT32((char *)r->buf2+8, new->dir.qid.vers);
-			PBIT8((char *)r->buf2+12, new->dir.qid.type);
+			PBIT64(r->buf2, new->st.st_ino);
 			r->ret = 0;
 		}
 		break;
 	}
 	case MSTAT:
-		r->ret = convD2M(&fid->f->dir, r->buf, r->len);
+		r->ret = YAXstat2msg(&fid->f->st, r->buf, r->len);
 		break;
 	case MWSTAT:
 		/* TODO */

@@ -1,7 +1,9 @@
 #define __YAX__
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <yax/stat.h>
+#include <sys/stat.h>
+#include <codas/bit.h>
 #include <yaxfs/file.h>
 
 typedef struct {
@@ -19,13 +21,13 @@ static void freedir(File *f)
 	free(dir);
 }
 
-File *dirnew(Dir d)
+File *dirnew(struct stat st, char const *name)
 {
 	Directory *dir = malloc(sizeof *dir);
 	dir->nents = 0;
 	dir->ents = 0;
 	dir->cap = 0;
-	return filenew(d, dir, freedir);
+	return filenew(st, name, dir, freedir);
 }
 
 void diraddfile(File *d, File *f)
@@ -67,21 +69,57 @@ File **dirnext(File *d, File **f)
 	return f + 1;
 }
 
+ssize_t dirreadent(File *f, char *buf, size_t len)
+{
+	size_t dlen = 2 + YAXstat2msg(&f->st, 0, 0);
+	size_t namelen = strlen(f->name);
+	dlen += 2 + namelen;
+	if(len < 2)
+		return -EIO;
+	PBIT16(buf, dlen);
+	buf += 2;
+	if(len < dlen)
+		return 2;
+	buf += YAXstat2msg(&f->st, buf, len - 2);
+	PBIT16(buf, namelen);
+	buf += 2;
+	memcpy(buf, f->name, namelen);
+	return dlen;
+}
+
+ssize_t dirreadents(File *d, File ***f, char *buf, size_t len)
+{
+	size_t rlen = 0;
+	ssize_t rret;
+	while(rlen < len) {
+		File **nf = dirnext(d, *f);
+		if(!nf)
+			return rlen;
+		rret = dirreadent(*nf, buf + rlen, len - rlen);
+		if(rret < 0)
+			return rret;
+		rlen += rret;
+		*f = nf;
+	}
+	return rlen;
+}
+
 File *dirwalk(File *f, char const *name, size_t len)
 {
 	File **c = 0;
 	while((c = dirnext(f, c))) {
-		if(strncmp((*c)->dir.name, name, len) == 0)
+		if(strncmp((*c)->name, name, len) == 0)
 			return *c;
 	}
 	return 0;
 }
 
-File *filenew(Dir d, void *aux, void (*freeaux)(File *))
+File *filenew(struct stat st, char const *name, void *aux, void (*freeaux)(File *))
 {
 	File *f = malloc(sizeof *f);
 	f->lncnt = 0;
-	f->dir = d;
+	f->name = name;
+	f->st = st;
 	f->aux = aux;
 	f->freeaux = freeaux;
 	return f;

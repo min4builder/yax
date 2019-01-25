@@ -1,7 +1,22 @@
 #include <_yalc.h>
 
-#if !defined(_CTYPE_H_ANSI)
-#define _CTYPE_H_ANSI
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#endif /* _CTYPE_H_ANSI */
+#ifndef _CTYPE_H
+#define _CTYPE_H
+
+int isdigit(int);
+int isspace(int);
+int isupper(int);
+int isxdigit(int);
+int tolower(int);
+int toupper(int);
+
+#endif /* _CTYPE_H */
+
+#ifdef __cplusplus
+}
+#endif
 

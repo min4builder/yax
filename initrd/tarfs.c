@@ -3,9 +3,9 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <yax/mount.h>
-#include <yax/stat.h>
 #include <codas/bit.h>
 #include <yaxfs/dofunc.h>
 #include <yaxfs/fid.h>
@@ -63,24 +63,13 @@ static int subent(char *a1, char *a2, char *b)
 	}
 }
 
-static Dir mkdirent(int j, int dir, int perm, const char *name, const char *uid, const char *gid, int size)
+static struct stat mkdirent(int j, int dir, int perm, int size)
 {
-	Dir d = { { 0, 0, 0 }, 0, 0, 0, 0, "", "", "", "" };
-	d.qid.path = j;
-	d.qid.vers = 0;
-	d.qid.type = dir ? QTDIR : 0;
-	d.mode = (d.qid.type << 24) | (perm & ~0222);
-	d.length = size;
-	if(name[strlen(name)-1] == '/') {
-		char *newname = malloc(strlen(name));
-		strlcpy(newname, name, strlen(name));
-		name = newname;
-	}
-	d.name = name;
-	d.uid = uid;
-	d.gid = gid;
-	d.muid = d.uid;
-	return d;
+	struct stat st = { 0 };
+	st.st_ino = j;
+	st.st_mode = (dir ? S_IFDIR : 0) | (perm & ~0222);
+	st.st_size = size;
+	return st;
 }
 
 static void setupdir(File *dir, char *path, char *file)
@@ -89,18 +78,19 @@ static void setupdir(File *dir, char *path, char *file)
 	while(!memcmp(f + 257, "ustar", 5)) {
 		int size = oparse(f + 124, 11);
 		if(subent(f + 345, f, path)) {
-			Dir d = mkdirent((int)f, f[156] == '5', oparse(f + 100, 6), fname(f), f + 265, f + 297, size);
+			struct stat st = mkdirent((int)f, f[156] == '5', oparse(f + 100, 6), size);
+			char const *name = fname(f);
 			File *nf;
 			if(f[156] == '5') {
-				char *np = malloc(strlen(path) + strlen(d.name) + 2);
+				char *np = malloc(strlen(path) + strlen(name) + 2);
 				strcpy(np, path);
-				strcat(np, d.name);
+				strcat(np, name);
 				strcat(np, "/");
-				nf = dirnew(d);
+				nf = dirnew(st, name);
 				setupdir(nf, np, file);
 				free(np);
 			} else {
-				nf = filenew(d, f, 0);
+				nf = filenew(st, name, f, 0);
 			}
 			diraddfile(dir, nf);
 		}
@@ -110,23 +100,22 @@ static void setupdir(File *dir, char *path, char *file)
 
 static ssize_t tpread(Fid *fid, void *buf, size_t len, off_t off)
 {
-	if(off + len > fid->f->dir.length)
-		len = fid->f->dir.length - off < 0 ? 0 : fid->f->dir.length - off;
+	if(off + len > fid->f->st.st_size)
+		len = fid->f->st.st_size - off < 0 ? 0 : fid->f->st.st_size - off;
 	memcpy(buf, (char *) fid->f->aux + 512 + off, len);
 	return len;
 }
 
 int tarfsmkmnt(int *b)
 {
-	Qid qid = { 0x80, 0, 0 };
-	return mkmnt(b, qid);
+	return mkmnt(b, 0);
 }
 
 void tarfsserve(int fd, char *file)
 {
 	Func func = { .pread = tpread };
 	Fidpool fds = FIDPOOL;
-	File *root = dirnew(mkdirent(0, 1, 0777, "/", "", "", 0));
+	File *root = dirnew(mkdirent(0, 1, 0777, 0), "/");
 	setupdir(root, "/", file);
 	fidadd(&fds, fidnew(root, 0));
 	for(;;) {

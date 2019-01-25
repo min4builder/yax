@@ -3,11 +3,11 @@
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <yax/func.h>
 #include <yax/mount.h>
 #include <yax/port.h>
-#include <yax/stat.h>
 #include <codas/bit.h>
 #include <yaxfs/dofunc.h>
 #include <yaxfs/fid.h>
@@ -29,15 +29,14 @@ int main(int argc, char **argv)
 	int a;
 	char *vga = mmap(0, 80 * 25 * 2, PROT_READ | PROT_WRITE, MAP_PHYS, 0, 0xB8000);
 	int irq1 = open("/irq/1", O_RDONLY);
-	Qid qid = { 0x80, 0, 0 };
 	File *root;
 
-	fd = mkmnt(&mnt, qid);
+	fd = mkmnt(&mnt, 0);
 	mount("/dev", fd, MAFTER);
 	close(fd);
 
-	root = dirnew((Dir) { { QTDIR, 0, 0 }, DMDIR | 0555, 0, 0, 0, "/", "", "", "" });
-	diraddfile(root, filenew((Dir) { { QTAPPEND | QTTMP, 1, 0 }, DMAPPEND | DMTMP | 0660, 0, 0, 80 * 24, "cons", "", "", "" }, 0, 0));
+	root = dirnew((struct stat) { .st_ino = 0, .st_mode = S_IFDIR | 0555, .st_size = 0 }, "/");
+	diraddfile(root, filenew((struct stat) { .st_ino = 1, .st_mode = S_IFIFO | 0660, .st_size = 80 * 24 }, "cons", 0, 0));
 
 	fidadd(&fidp, fidnew(root, 0));
 
@@ -119,11 +118,7 @@ int main(int argc, char **argv)
 			Fid *fid = fidlookup(&fidp, r.fid);
 			int i, j = 0, err;
 			if(fid->f == root) {
-				fid->dirread = dirnext(fid->f, fid->dirread);
-				if(fid->dirread) {
-					r.ret = convD2M(&(*fid->dirread)->dir, r.buf, r.len);
-				} else
-					r.ret = 0;
+				r.ret = dirreadents(fid->f, &fid->dirread, r.buf, r.len);
 				break;
 			}
 			while(!j) {

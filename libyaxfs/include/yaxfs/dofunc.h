@@ -1,7 +1,7 @@
 #ifndef YAXFS_DOFUNC_H_
 #define YAXFS_DOFUNC_H_
 
-#include <yax/stat.h>
+#include <sys/stat.h>
 #include <yaxfs/fid.h>
 #include <yaxfs/file.h>
 #include <yaxfs/serve.h>
@@ -14,6 +14,7 @@ typedef struct {
 } Func;
 
 void dofunc(Req *, Fidpool *, Func *);
+void deffunc(Req *, Fid *, Func *);
 
 #endif /* YAXFS_DOFUNC_H_ */
 

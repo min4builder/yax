@@ -5,7 +5,7 @@ LIBS=-lcodas -lk
 
 QEMU=-serial stdio -kernel yax.bin -initrd ../initrd/initrd -hda /dev/zero
 
-FS = fs/conn.o fs/fds.o fs/iofs.o fs/mnt.o fs/name.o fs/pipe.o fs/printkfs.o
+FS = fs/conn.o fs/fds.o fs/mnt.o fs/name.o fs/pipe.o fs/printkfs.o
 MEM = mem/malloc.o mem/pgdir.o mem/pgdirs.o mem/phys.o mem/str.o mem/user.o \
 	mem/usrboundary.o mem/virt.o
 # boot.o must be first, otherwise alphabetic order

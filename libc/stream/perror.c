@@ -4,6 +4,9 @@
 
 void perror(char const *s)
 {
-	fprintf(stderr, "%s: %s\n", s, strerror(errno));
+	if(!s || !*s)
+		fprintf(stderr, "%s\n", strerror(errno));
+	else
+		fprintf(stderr, "%s: %s\n", s, strerror(errno));
 }
 

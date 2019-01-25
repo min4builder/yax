@@ -25,6 +25,9 @@ struct tm {
 	    tm_isdst;
 };
 
+struct tm *localtime(time_t const *);
+time_t time(time_t *);
+
 #endif /* _TIME_H_ANSI */
 
 #if !defined(_TIME_H_POSIX) && defined(_YALC_NEED_POSIX)

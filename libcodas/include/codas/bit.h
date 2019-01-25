@@ -1,6 +1,7 @@
 #ifndef CODAS_BIT_H_
 #define CODAS_BIT_H
 
+#include <limits.h>
 #include <stdint.h>
 
 #define GBIT8(b) (*(uint8_t *)(b))
@@ -12,6 +13,13 @@
 #define PBIT16(b, v) (PBIT8(b, (v) & 0xFF), PBIT8((uint8_t *)(b)+1, (v) >> 8))
 #define PBIT32(b, v) (PBIT16(b, (v) & 0xFFFF), PBIT16((uint8_t *)(b)+2, (v) >> 16))
 #define PBIT64(b, v) (PBIT32(b, (v) & 0xFFFFFFFF), PBIT32((uint8_t *)(b)+4, (v) >> 32))
+
+#if UINTPTR_MAX == 0xffffffff
+#define GBITPTR(b) GBIT32(b)
+#define PBITPTR(b, v) PBIT32(b, (uint32_t) (v))
+#else
+#error Unsupported bit width
+#endif
 
 #endif /* CODAS_BIT_H_ */
 

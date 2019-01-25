@@ -1,11 +1,11 @@
 #ifndef _CONN_H
 #define _CONN_H
 
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <codas/ref.h>
 #include <yax/fn.h>
 #include <yax/lock.h>
-#include <yax/stat.h>
 #include "mem/str.h"
 
 typedef struct Conn Conn;
@@ -21,10 +21,10 @@ struct Conn {
 	Dev *dev;
 	void *inst;
 	Str *name;
-	Qid qid;
+	ino_t ino;
 };
 
-void conninit(Conn *, const char *, Qid, Dev *, void *);
+void conninit(Conn *, const char *, ino_t, Dev *, void *);
 Conn *conndup(Conn *, Str *);
 
 int connsend(Conn *, int, int, void *, size_t, void *, size_t, off_t);

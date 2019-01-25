@@ -1,9 +1,9 @@
 #define __YAX__
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <yax/lock.h>
 #include <yax/openflags.h>
-#include <yax/stat.h>
 #include "fs/conn.h"
 #include "fs/pipe.h"
 #include "mem/malloc.h"
@@ -33,13 +33,10 @@ void pipenew(Conn *cs[2])
 {
 	Buf *a, *b;
 	Pipe *ps[2];
-	Qid q = { 0x44, 0, 0 }; /* QTAPPEND | QTTMP */
 	ps[0] = malloc(sizeof(Pipe));
 	ps[1] = malloc(sizeof(Pipe));
-	q.path = 0;
-	conninit((Conn *)ps[0], "", q, &dev, (void *)ps[0]);
-	q.path = 1;
-	conninit((Conn *)ps[1], "", q, &dev, (void *)ps[0]);
+	conninit((Conn *) ps[0], "", 0, &dev, (void *)ps[0]);
+	conninit((Conn *) ps[1], "", 1, &dev, (void *)ps[0]);
 	ps[0]->other = ps[1];
 	ps[1]->other = ps[0];
 	a = malloc(sizeof(Buf));
@@ -127,11 +124,11 @@ static long long fn(Conn *c, int fn, int submsg, void *buf, size_t len, void *bu
 		return clen;
 	}
 	case MSTAT: {
-		Dir d = { { 0x44, 0, 0 }, 0x44000180, 0, 0, 0, "", "", "", "" };
-		d.qid = c->qid;
+		struct stat st = { .st_mode = S_IFIFO | 0600 };
+		st.st_ino = c->ino;
 		if(((Pipe *) c)->b)
-			d.length = ((Pipe *) c)->b->len;
-		return convD2M(&d, buf, len);
+			st.st_size = ((Pipe *) c)->b->len;
+		return YAXstat2msg(&st, buf, len);
 	}
 	case MOPEN: {
 		if(submsg & (O_EXCL | O_TRUNC))
@@ -139,7 +136,7 @@ static long long fn(Conn *c, int fn, int submsg, void *buf, size_t len, void *bu
 		return 0;
 	}
 	default:
-		return -EINVAL;
+		return -ENOSYS;
 	}
 	(void) buf2, (void) len2, (void) off;
 }

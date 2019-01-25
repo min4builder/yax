@@ -5,10 +5,10 @@
 #ifndef YAX_MOUNT_H_
 #define YAX_MOUNT_H_
 
+#include <sys/stat.h>
 #include <yax/mountflags.h>
-#include <yax/stat.h>
 
-int mkmnt(int *, Qid);
+int mkmnt(int *, ino_t);
 int mount(const char *, int, int);
 int __getprintk(void);
 

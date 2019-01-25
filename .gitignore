@@ -1,0 +1,7 @@
+*.[oa]
+.*
+/src/yax.bin
+/initrd/initrd
+/drivers/cons
+/drivers/disk
+

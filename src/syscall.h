@@ -17,7 +17,7 @@ pid_t sys_rfork(enum rfflags);
 
 int sys_exec(const char *, const char *, const char *);
 
-int sys_mkmnt(int *, Qid);
+int sys_mkmnt(int *);
 
 void *sys_mmap(void *, size_t, enum mapprot, enum mapflags, uint32_t, off_t);
 int sys_munmap(void *, size_t);
