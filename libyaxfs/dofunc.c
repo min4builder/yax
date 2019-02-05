@@ -130,7 +130,7 @@ void deffunc(Req *r, Fid *fid, Func *fs)
 		break;
 	case MWALK: {
 		File *new;
-		if(r->len2 != 13) {
+		if(r->len2 != 8) {
 			r->ret = -EINVAL;
 			break;
 		}

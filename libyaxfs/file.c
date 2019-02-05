@@ -137,12 +137,3 @@ void filedel(File *f)
 	}
 }
 
-void debugprintfile(File *f)
-{
-	if(f->st.st_mode & S_IFDIR) {
-		/*dbgprintdir(f);*/
-	} else {
-		printf(" ");
-	}
-}
-
