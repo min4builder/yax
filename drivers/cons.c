@@ -28,7 +28,7 @@ int main(int argc, char **argv)
 	int fd, mnt;
 	int a;
 	char *vga = mmap(0, 80 * 25 * 2, PROT_READ | PROT_WRITE, MAP_PHYS, 0, 0xB8000);
-	int irq1 = open("/irq/1", O_RDONLY);
+	int irq1 = open("/1", O_RDONLY);
 	File *root;
 
 	fd = mkmnt(&mnt);
