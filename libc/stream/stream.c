@@ -1,4 +1,6 @@
+#define _POSIX_SOURCE
 #include <stdio.h>
+#include "stream.h"
 
 static char inbuf[BUFSIZ], outbuf[BUFSIZ], errbuf[BUFSIZ];
 static FILE _stdin = {

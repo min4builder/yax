@@ -13,6 +13,11 @@ int fstat(int fd, struct stat *st)
 		errno = -ret;
 		return -1;
 	}
-	return YAXmsg2stat(buf, st, ret);
+	if(ret < STATMSGSIZ) {
+		errno = EIO;
+		return -1;
+	}
+	YAXmsg2stat(buf, st);
+	return 0;
 }
 

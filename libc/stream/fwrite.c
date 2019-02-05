@@ -1,5 +1,7 @@
+#define _POSIX_SOURCE
 #include <stdio.h>
 #include <string.h>
+#include "stream.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 

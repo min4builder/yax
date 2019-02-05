@@ -20,7 +20,7 @@ void dirdelfile(File *, File *);
 File **dirnext(File *, File **);
 File *dirwalk(File *, char const *, size_t);
 
-size_t dirreadent(File *, char *, size_t);
+ssize_t dirreadent(File *, char *, size_t);
 ssize_t dirreadents(File *, File ***, char *, size_t);
 
 File *filenew(struct stat, char const *, void *, void (*)(File *));
