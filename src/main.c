@@ -126,7 +126,7 @@ void kernel_main(MultibootInfo *mbinfo)
 	/* no need for these anymore */
 	for(i = (uintptr_t) mod.start; i <= (uintptr_t) mod.end; i += PGLEN)
 		ppgfree(i);
-	/*vfsmount("/", iofsnew(), 0); *//* TODO check for errors and stuff */
+/*	vfsmount("/", iofsnew(), 0); *//* TODO check for errors and stuff */
 	usermode(code, (void *) err);
 }
 

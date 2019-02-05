@@ -52,5 +52,5 @@ libk.a: $(LIBK_OBJS)
 	$(AR) $@ $(LIBK_OBJS)
 
 clean:
-	rm -f *.o *.a
+	rm -f *.o *.a */*.o
 
