@@ -106,11 +106,6 @@ static ssize_t tpread(Fid *fid, void *buf, size_t len, off_t off)
 	return len;
 }
 
-int tarfsmkmnt(int *b)
-{
-	return mkmnt(b, 0);
-}
-
 void tarfsserve(int fd, char *file)
 {
 	Func func = { .pread = tpread };

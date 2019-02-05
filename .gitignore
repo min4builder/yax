@@ -1,7 +1,12 @@
 *.[oa]
 .*
+/config.sh
+/sysroot/
+/src/depend.mk
 /src/yax.bin
 /initrd/initrd
+/initrd/init
+/initrd/sf
 /drivers/cons
 /drivers/disk
 

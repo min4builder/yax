@@ -113,7 +113,7 @@ int main()
 	int iobase = 0x1F0;
 	int cbase = 0x3F6;
 	int srv;
-	int fd = mkmnt(&srv, 0);
+	int fd = mkmnt(&srv);
 	mount("/dev", fd, MBEFORE);
 	close(fd);
 	fd = __getprintk();

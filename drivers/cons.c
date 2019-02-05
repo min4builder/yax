@@ -31,7 +31,7 @@ int main(int argc, char **argv)
 	int irq1 = open("/irq/1", O_RDONLY);
 	File *root;
 
-	fd = mkmnt(&mnt, 0);
+	fd = mkmnt(&mnt);
 	mount("/dev", fd, MAFTER);
 	close(fd);
 

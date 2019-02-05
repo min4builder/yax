@@ -60,7 +60,14 @@ int fdalloc(Conn *c)
 void fddealloc(int fd)
 {
 	FdList *fl = curproc->fds;
-	if((unsigned int) fd >= fl->len || !fl->list[fd])
+	if((unsigned int) fd >= fl->len) {
+		fl->list = realloc(fl->list, (fd + 1) * sizeof(Conn *));
+		for(; fl->len < (unsigned int) fd + 1; fl->len++)
+			fl->list[fl->len] = 0;
+		fl->list[fd] = 0;
+		return;
+	}
+	if(!fl->list[fd])
 		return;
 	unref(fl->list[fd]);
 	fl->list[fd] = 0;

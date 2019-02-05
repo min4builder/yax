@@ -7,6 +7,7 @@ enum {
 	EAGAIN,
 	EBADF,
 	EEXIST,
+	EFAULT,
 	EINVAL,
 	EISDIR,
 	EMFILE,

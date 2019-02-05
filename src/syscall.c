@@ -1,4 +1,3 @@
-#define NDEBUG
 #define __YAX__
 #include <stdint.h>
 #include <string.h>
@@ -128,13 +127,25 @@ bail:
 int sys_mkmnt(int *master)
 {
 	Conn *root, *m;
-	if(!verusrptr(master, sizeof(*master), PROT_WRITE))
-		return -EINVAL;
+	int fd;
+	iprintk(curproc->pid);
+	printk(": mkmnt() = ");
+	if(!verusrptr(master, sizeof(*master), PROT_WRITE)) {
+		printk("-EFAULT\n");
+		return -EFAULT;
+	}
 	root = mntnew(&m);
-	if(!root)
+	if(!root) {
+		printk("-EIO\n");
 		return -EIO;
+	}
 	*master = fdalloc(m);
-	return fdalloc(root);
+	fd = fdalloc(root);
+	iprintk(*master);
+	printk(", ");
+	iprintk(fd);
+	cprintk('\n');
+	return fd;
 }
 
 void *sys_mmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, uint32_t fd, off_t off)
@@ -335,11 +346,32 @@ void sys_close(int fd)
 int sys_dup2(int from, int to)
 {
 	Conn *c = FD2CONN(from);
-	if(!c)
-		return -EINVAL;
-	if(to < 0)
-		return fdalloc(c);
-	return FDSET(to, c);
+	int fd;
+	iprintk(curproc->pid);
+	printk(": dup2(");
+	iprintk(from);
+	printk(", ");
+	iprintk(to);
+	printk(") = ");
+	if(!c) {
+		printk("EBADF\n");
+		return -EBADF;
+	}
+	c = conndup(c, c->name);
+	if(!c) {
+		printk("EIO\n");
+		return -EIO;
+	}
+	if(to < 0) {
+		fd = fdalloc(c);
+		iprintk(fd);
+		cprintk('\n');
+		return fd;
+	}
+	to = FDSET(to, c);
+	iprintk(to);
+	cprintk('\n');
+	return to;
 }
 
 void sys_chdir(const char *name)

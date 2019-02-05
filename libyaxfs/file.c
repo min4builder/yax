@@ -1,6 +1,7 @@
 #define __YAX__
 #include <errno.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <codas/bit.h>
@@ -74,12 +75,10 @@ ssize_t dirreadent(File *f, char *buf, size_t len)
 	size_t dlen = 2 + YAXstat2msg(&f->st, 0, 0);
 	size_t namelen = strlen(f->name);
 	dlen += 2 + namelen;
-	if(len < 2)
-		return -EIO;
+	if(len < dlen)
+		return 0;
 	PBIT16(buf, dlen);
 	buf += 2;
-	if(len < dlen)
-		return 2;
 	buf += YAXstat2msg(&f->st, buf, len - 2);
 	PBIT16(buf, namelen);
 	buf += 2;
@@ -135,6 +134,15 @@ void filedel(File *f)
 		if(f->freeaux)
 			f->freeaux(f);
 		free(f);
+	}
+}
+
+void debugprintfile(File *f)
+{
+	if(f->st.st_mode & S_IFDIR) {
+		/*dbgprintdir(f);*/
+	} else {
+		printf(" ");
 	}
 }
 

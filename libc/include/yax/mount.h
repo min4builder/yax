@@ -8,7 +8,7 @@
 #include <sys/stat.h>
 #include <yax/mountflags.h>
 
-int mkmnt(int *, ino_t);
+int mkmnt(int *);
 int mount(const char *, int, int);
 int __getprintk(void);
 

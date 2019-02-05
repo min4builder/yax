@@ -9,8 +9,6 @@
 #include "mem/usrboundary.h"
 #include "multitask.h"
 
-/* TODO gather supported messages */
-
 typedef struct Msg Msg;
 struct Msg {
 	Msg *next;
