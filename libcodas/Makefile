@@ -1,6 +1,6 @@
 include ../config.mk
 
-OBJS:=ref.o
+OBJS:=ref.o vector.o
 
 all: headers $(LIBINSTALL)/libcodas.a
 

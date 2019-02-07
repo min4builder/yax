@@ -3,6 +3,7 @@
 
 #include <sys/types.h>
 #include <yaxfs/file.h>
+#include <codas/vector.h>
 
 typedef struct {
 	off_t off;
@@ -12,11 +13,9 @@ typedef struct {
 	void *aux;
 } Fid;
 
-typedef struct {
-	Fid *fids[256];
-} Fidpool;
+typedef Vec(Fid *) Fidpool;
 
-#define FIDPOOL { { 0 } }
+#define FIDPOOL vecnew(Fid *, 0)
 
 Fid *fidnew(File *, void *aux);
 void fiddel(Fid *);

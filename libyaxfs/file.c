@@ -5,69 +5,59 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <codas/bit.h>
+#include <codas/vector.h>
 #include <yaxfs/file.h>
 
-typedef struct {
-	int nents, cap;
-	File **ents;
-} Directory;
+typedef Vec(File *) Directory;
 
 static void freedir(File *f)
 {
 	Directory *dir = f->aux;
-	int i;
-	for(i = 0; i < dir->nents; i++)
-		filedel(dir->ents[i]);
-	free(dir->ents);
+	vecdrop(dir);
 	free(dir);
+}
+
+static void filedrop(void *d)
+{
+	filedel((File *) d);
 }
 
 File *dirnew(struct stat st, char const *name)
 {
 	Directory *dir = malloc(sizeof *dir);
-	dir->nents = 0;
-	dir->ents = 0;
-	dir->cap = 0;
+	*dir = vecnew(File *, filedrop);
 	return filenew(st, name, dir, freedir);
 }
 
 void diraddfile(File *d, File *f)
 {
 	Directory *dir = d->aux;
-	if(++dir->nents >= dir->cap) {
-		dir->cap *= 2;
-		if(dir->cap == 0)
-			dir->cap = 16;
-		dir->ents = realloc(dir->ents, (sizeof *dir->ents) * dir->cap);
-	}
-	dir->ents[dir->nents-1] = f;
+	vecpush(dir, f);
 	f->lncnt++;
 }
 
 void dirdelfile(File *d, File *f)
 {
 	Directory *dir = d->aux;
-	int i;
-	for(i = 0; i < dir->nents; i++) {
-		if(dir->ents[i] == f) {
-			memmove(&dir->ents[i], &dir->ents[i+1], (dir->nents - i) * sizeof *dir->ents);
+	size_t i;
+	for(i = 0; i < veclen(dir); i++) {
+		if(vecget(dir, i) == f) {
+			vecremswap(dir, i);
 			break;
 		}
 	}
-	if(--dir->nents < dir->cap / 2) {
-		dir->cap /= 2;
-		dir->ents = realloc(dir->ents, (sizeof *dir->ents) * dir->cap);
-	}
 }
 
-File **dirnext(File *d, File **f)
+File *const *diriter(File *d)
 {
 	Directory *dir = d->aux;
-	if(!f)
-		return dir->ents;
-	if(f - dir->ents > dir->nents)
-		return 0;
-	return f + 1;
+	return veciter(dir);
+}
+
+File *const *diriternext(File *d, File *const *f)
+{
+	Directory *dir = d->aux;
+	return veciternext(dir, f);
 }
 
 ssize_t dirreadent(File *f, char *buf, size_t len)
@@ -86,27 +76,30 @@ ssize_t dirreadent(File *f, char *buf, size_t len)
 	return dlen;
 }
 
-ssize_t dirreadents(File *d, File ***f, char *buf, size_t len)
+ssize_t dirreadents(File *d, File *const **const f, char *buf, size_t len)
 {
 	size_t rlen = 0;
 	ssize_t rret;
+	if(!*f)
+		*f = diriter(d);
+	else
+		*f = diriternext(d, *f);
 	while(rlen < len) {
-		File **nf = dirnext(d, *f);
-		if(!nf)
+		if(!*f)
 			return rlen;
-		rret = dirreadent(*nf, buf + rlen, len - rlen);
+		rret = dirreadent(**f, buf + rlen, len - rlen);
 		if(rret < 0)
 			return rret;
 		rlen += rret;
-		*f = nf;
+		*f = diriternext(d, *f);
 	}
 	return rlen;
 }
 
 File *dirwalk(File *f, char const *name, size_t len)
 {
-	File **c = 0;
-	while((c = dirnext(f, c))) {
+	File *const *c;
+	for(c = diriter(f); c; c = diriternext(f, c)) {
 		if(strncmp((*c)->name, name, len) == 0)
 			return *c;
 	}

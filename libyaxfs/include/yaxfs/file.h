@@ -17,11 +17,12 @@ struct File {
 File *dirnew(struct stat, char const *);
 void diraddfile(File *, File *);
 void dirdelfile(File *, File *);
-File **dirnext(File *, File **);
+File *const *diriter(File *);
+File *const *diriternext(File *, File *const *);
 File *dirwalk(File *, char const *, size_t);
 
 ssize_t dirreadent(File *, char *, size_t);
-ssize_t dirreadents(File *, File ***, char *, size_t);
+ssize_t dirreadents(File *, File *const **const, char *, size_t);
 
 File *filenew(struct stat, char const *, void *, void (*)(File *));
 ssize_t filestat(File *, void *, size_t);
