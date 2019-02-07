@@ -1,8 +1,7 @@
 #include <errno.h>
 #include <string.h>
 
-static char const *errtab[MAXERR] = {
-	[0] = "(invalid error, it's the programmer's fault)",
+static char const *errtab[MAXERR+1] = {
 	[ENOSYS] = "Not supported",
 	[EACCES] = "Forbidden",
 	[EAGAIN] = "Try again",
@@ -24,13 +23,14 @@ static char const *errtab[MAXERR] = {
 	[ERANGE] = "Result too large",
 	[ESRCH] = "No such process",
 	[EIO] = "Input/Output error",
-	[ESPIPE] = "Cannot seek"
+	[ESPIPE] = "Cannot seek",
+	[MAXERR] = "(invalid error, the programmer screwed up)"
 };
 
 char *strerror(int k)
 {
 	if(k < 0 || k > MAXERR || !errtab[k])
-		return (char *) errtab[0];
+		return (char *) errtab[MAXERR];
 	return (char *) errtab[k];
 }
 

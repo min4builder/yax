@@ -13,10 +13,20 @@ and open it according to the permissions in
 (one of
 .BR O_RDONLY ", " O_WRONLY " and " O_RDWR ,
 meaning read\-only, write\-only and read\-write, respectively).
+.PP
+If
+.I fl
+is
+.BR O_PATH ,
+the file is walked to but not opened. No operations other than
+.BR mount ()ing
+or closing the file are allowed.
 .SH NOTE
 The file must support the
 .B MOPEN
-message.
+message (unless
+.B O_PATH
+is used).
 .PP
 On standard file systems, directories can also be opened read\-only. Reading
 a directory returns the directory entries in the same format as

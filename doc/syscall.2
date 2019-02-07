@@ -17,8 +17,9 @@ syscall \- how to do a system call on x86
 .SH DESCRIPTION
 To do an x86 system call, the
 .B syscall
-instruction is used. On processors that don't support it, it is emulated. The
-calling convention is standard System V calling convention, except with a
+instruction is used. On processors that don't support it, it is trapped and
+emulated. The calling convention is standard System V calling convention,
+except with a
 .B syscall
 instruction in place of the
 .BR call ,

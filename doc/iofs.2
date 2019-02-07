@@ -1,48 +1,24 @@
-.TH iofs 2 "January 2019" YAX "KERNEL INTERFACES"
+.TH iofs 2 "February 2019" YAX "KERNEL INTERFACES"
 .SH NAME
-iofs \- expose x86 I/O ports and interrupts to userspace
+iofs \- expose x86 interrupts to userspace
 .SH SYNOPSYS
-interrupts to userspace
-.SH SYNOPSYS
-.BR port/0000 \- port/ffff
-.PP
-.BR irq/0 \- irq/f
+.BR 0 \- f
 .SH DESCRIPTION
-The
-.B port
-directory contains 65536 pseudo\-files, one for each harware port, named in
-lowercase hexadecimal. When open, they may be read or written, one byte at a
-time, to read/write from/to that port.
-.PP
-The
-.B irq
-directory contains 16 pseudo\-files, one for each hardware interrupt, named in
-lowercase hexadecimal. When open, they may be read, one machine integer at a
-time, to return the number of interrupts of that kind since the last read.
-When the read would return 0, instead it blocks until at least one interrupt
-was triggered.
+The root directory of this filesystem contains 16 pseudo\-files, one for each
+hardware interrupt, named in lowercase hexadecimal. When open, they may be read,
+one machine integer at a time, to return the number of interrupts of that kind
+since the last read. When the read would return 0, instead it blocks until at
+least one interrupt was triggered.
 .PP
 It is mounted by the kernel at
 .B /
 on startup. This location may be bound elsewhere afterwards.
 .SH NOTE
-It is much faster and easier to use
-.BR ioperm (2)
-and standard
-.BR inb " and " outb
-instructions than
-.BR port/* .
-.PP
 Two processes should not open the same port or interrupt file at once. This may
 result into serious race conditions and is likely undesired anyway.
 .SH SEE ALSO
 .BR intro (2),
 .BR func (2)
 .SH BUGS
-.B port
-is useless with the much faster
-.BR ioperm (2)
-system.
-.PP
 The default mounting location is dumb.
 
