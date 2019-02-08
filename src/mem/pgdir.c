@@ -86,7 +86,7 @@ uintptr_t pgunmap(uintptr_t pg)
 
 uintptr_t pgfind(size_t len, int user)
 {
-	/* can't map at 0 */
+	/* can't find pages at 0 */
 	uintptr_t i = user ? PGLEN : (uintptr_t) VIRT(0);
 	uintptr_t limit = user ? (uintptr_t) MAXUPG : (uintptr_t) SPG;
 	while(i < limit) {

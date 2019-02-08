@@ -73,7 +73,9 @@ if there is no address space, and
 .BR EINVAL ,
 in the case of invalid or out\-of\-range arguments.
 .SH NOTE
-No mappings can be established at the zero address.
+The default address for a mapping will never be 0, however memory may still be
+mapped there through
+.BR MAP_FIXED .
 .SH SEE ALSO
 .BR munmap (2)
 .SH BUGS

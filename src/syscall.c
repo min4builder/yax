@@ -168,12 +168,12 @@ void *sys_mmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, u
 	uxprintk(off);
 	printk(") = ");
 	if(flags > MAP_MAX || prot > PROT_MAX
-	|| (flags & MAP_FIXED && ((unsigned int) addr % PGLEN || addr == 0))) {
+	|| (flags & MAP_FIXED && ((unsigned int) addr % PGLEN))) {
 		printk("Out of range!\n");
-		return (void *) -EINVAL;
+		return ERR2PTR(-EINVAL);
 	} else if(flags & MAP_FIXED && (uint8_t *) addr + len > VIRT(0) ) {
 		printk("Can't map over kernel!\n");
-		return (void *) -EINVAL;
+		return ERR2PTR(-EINVAL);
 	}
 	if(!(flags & (MAP_ANONYMOUS | MAP_PHYS))) {
 		c = FD2CONN(fd);
@@ -201,7 +201,7 @@ int sys_munmap(void *addr, size_t len)
 	printk(", ");
 	uxprintk(len);
 	printk(");\n");
-	if((unsigned int) addr % PGLEN || addr == 0 || len == 0 || (uint8_t *) addr + len > VIRT(0)) {
+	if((unsigned int) addr % PGLEN || len == 0 || (uint8_t *) addr + len > VIRT(0)) {
 		printk("Out of range!\n");
 		return -EINVAL;
 	}

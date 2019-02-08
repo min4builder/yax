@@ -78,8 +78,6 @@ Process memory is mapped through an \*(lqaddress space\*(rq, which is composed
 of a set of \*(lqmappings\*(rq, and these are regions of memory with common
 properties (like being mapped to a file or zero\-initialized).
 .PP
-Address 0 is never mapped. It is illegal to attempt to do it.
-.PP
 The system calls associated with memory management are:
 .IP \(bu
 .BR exec (2)
@@ -161,7 +159,4 @@ are not general enough.
 Proper page fault handling is not implemented.
 .PP
 Most processor faults and traps result in kernel panics.
-.PP
-Address 0 is invalid, which is incompatible with
-.SM POSIX.
 
