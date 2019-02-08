@@ -40,7 +40,7 @@ void vecpush_(struct Vector *vec, void const *elem)
 	vec->len++;
 }
 
-void vecdrop_(struct Vector *vec)
+void vecdrop(struct Vector *vec)
 {
 	size_t i;
 	if(vec->drop) {

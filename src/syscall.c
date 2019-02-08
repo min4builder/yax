@@ -1,3 +1,4 @@
+#define NDEBUG
 #define __YAX__
 #include <stdint.h>
 #include <string.h>

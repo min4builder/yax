@@ -1,6 +1,6 @@
 include ../config.mk
 
-LIBS+=-lyaxfs
+LIBS+=-lyaxfs -lcodas
 
 all: initrd
 

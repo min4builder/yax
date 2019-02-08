@@ -8,7 +8,7 @@
 typedef struct {
 	off_t off;
 	char omode;
-	File **dirread;
+	File *const *dirread;
 	File *f;
 	void *aux;
 } Fid;

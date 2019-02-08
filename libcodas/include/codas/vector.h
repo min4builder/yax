@@ -62,7 +62,7 @@ inline void const *veciter(struct Vector *vec)
 
 inline void const *veciternext(struct Vector *vec, void const *cur)
 {
-	if(cur - vec->ptr >= vec->len)
+	if((cur - vec->ptr) / vec->type >= vec->len)
 		return 0;
 	else
 		return (char const *) cur + vec->type;

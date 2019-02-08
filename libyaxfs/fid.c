@@ -14,6 +14,11 @@ Fid *fidnew(File *f, void *aux)
 	return fid;
 }
 
+void fiddel(Fid *f)
+{
+	free(f);
+}
+
 int fidadd(Fidpool *pool, Fid *f)
 {
 	unsigned fid;
