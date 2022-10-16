@@ -21,23 +21,22 @@ kernel only, currently). It is mostly complete.
 
 ## How to compile
 
-    ./configure
-    ./build-binutils.sh
-    ./install-headers.sh
-    ./build-gcc.sh
+Currently only tested on my Linux computer. It *might* work on WSL or macOS, but
+that hasn't been tested.
 
-Then setup your environment with `. ./config.sh`.
+    ninja headers
+    ./bootstrap-llvm.sh # this step might take a few hours
+    ninja
 
-    make
-
-Then, `make test` for a qemu-based test run.
+Then, `ninja qemu` for a qemu-based test run; `ninja qemu-dbg` to start qemu on
+debug mode.
 
 ## Legal
-All code I wrote is under the (Expat) MIT license (previously public domain).
+All code I wrote is under the MIT license.
 Code not written by me:
 
  - liballoc is under the public domain.
    It is at `src/mem/malloc.[ch]` and `libc/malloc.[ch]`
- - vfprintf was taken from the Sortix libc; it is under ISC.
+ - vfprintf was taken from the Sortix libc, under ISC.
    It is at `libc/stream/vfprintf.c`
 

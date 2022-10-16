@@ -27,22 +27,22 @@ struct Vector vecwithcap_(Typesz, void (*)(void *), size_t);
 void vecpush_(struct Vector *, void const *);
 #define vecpush(v, e) vecpush_(v, &(e))
 
-inline void const *vecget(struct Vector const *vec, size_t n)
+static inline void const *vecget(struct Vector const *vec, size_t n)
 {
 	return (char const *) vec->ptr + n * vec->type;
 }
 
 /* void vecset(Vec(T) *vec, size_t n, T lval elem) */
-inline void vecset_(struct Vector *, size_t, void const *);
+static inline void vecset_(struct Vector *, size_t, void const *);
 #define vecset(v, n, e) vecset_(v, n, &(e))
 
-inline void vecset_(struct Vector *vec, size_t n, void const *elem)
+static inline void vecset_(struct Vector *vec, size_t n, void const *elem)
 {
 	extern void *memcpy(void *restrict, void const *restrict, size_t);
 	memcpy((char *) vec->ptr + n * vec->type, elem, vec->type);
 }
 
-inline void vecremswap(struct Vector *vec, size_t n)
+static inline void vecremswap(struct Vector *vec, size_t n)
 {
 	extern void *memcpy(void *restrict, void const *restrict, size_t);
 	memcpy((char *) vec->ptr + n * vec->type, (char const *) vec->ptr + (vec->len - 1) * vec->type, vec->type);
@@ -52,7 +52,7 @@ inline void vecremswap(struct Vector *vec, size_t n)
 #define veccap(v) ((v)->cap)
 #define veclen(v) ((v)->len)
 
-inline void const *veciter(struct Vector *vec)
+static inline void const *veciter(struct Vector *vec)
 {
 	if(vec->len == 0)
 		return 0;
@@ -60,7 +60,7 @@ inline void const *veciter(struct Vector *vec)
 		return vec->ptr;
 }
 
-inline void const *veciternext(struct Vector *vec, void const *cur)
+static inline void const *veciternext(struct Vector *vec, void const *cur)
 {
 	if((cur - vec->ptr) / vec->type >= vec->len)
 		return 0;

@@ -1,0 +1,21 @@
+tooldir = sysroot-llvm
+builddir = .build
+prefix = sysroot
+arch = i686
+qemu_arch = i386
+nasm_format = elf32
+libdir = $prefix/lib/$arch
+includedir = $prefix/include
+bindir = $prefix/bin/$arch
+
+cc = $tooldir/bin/clang --sysroot=$prefix
+as = nasm
+ar = $tooldir/bin/ar
+ld = $cc -L $libdir
+cflags = -g -O0 -pipe -flto=thin -mno-sse -mno-avx -isystem libc/include -isystem libcodas/include -isystem src/include -isystem libyaxfs/include
+asflags = -f$nasm_format -g
+ldflags = -g -flto=thin
+global_libs = -lclang_rt.builtins-i386
+
+rule ctags
+  command = ctags -R $in

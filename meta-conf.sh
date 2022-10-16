@@ -1,0 +1,5 @@
+LLVM_VER=13.0.1
+ARCH=i686
+TARGET=$ARCH-pc-yax
+LLVM_SYSROOT=$PWD/sysroot-llvm
+SYSROOT=$PWD/sysroot

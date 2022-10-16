@@ -1,0 +1,478 @@
+--- llvm-project-13.0.1.src/clang/lib/Basic/Targets.cpp
++++ llvm-project-13.0.1.src-patched/clang/lib/Basic/Targets.cpp
+@@ -536,6 +536,8 @@
+       return new NaClTargetInfo<X86_32TargetInfo>(Triple, Opts);
+     case llvm::Triple::ELFIAMCU:
+       return new MCUX86_32TargetInfo(Triple, Opts);
++    case llvm::Triple::Yax:
++      return new YaxTargetInfo<X86_32TargetInfo>(Triple, Opts);
+     case llvm::Triple::Hurd:
+       return new HurdTargetInfo<X86_32TargetInfo>(Triple, Opts);
+     default:
+@@ -590,6 +592,8 @@
+       return new NaClTargetInfo<X86_64TargetInfo>(Triple, Opts);
+     case llvm::Triple::PS4:
+       return new PS4OSTargetInfo<X86_64TargetInfo>(Triple, Opts);
++    case llvm::Triple::Yax:
++      return new YaxTargetInfo<X86_64TargetInfo>(Triple, Opts);
+     default:
+       return new X86_64TargetInfo(Triple, Opts);
+     }
+--- llvm-project-13.0.1.src/clang/lib/Basic/Targets/OSTargets.h
++++ llvm-project-13.0.1.src-patched/clang/lib/Basic/Targets/OSTargets.h
+@@ -924,6 +924,25 @@
+   }
+ };
+ 
++// Yax Target
++template <typename Target>
++class LLVM_LIBRARY_VISIBILITY YaxTargetInfo : public OSTargetInfo<Target> {
++protected:
++  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
++                    MacroBuilder &Builder) const override {
++    Builder.defineMacro("__yax__");
++    Builder.defineMacro("__ELF__");
++    if (Opts.POSIXThreads)
++      Builder.defineMacro("_REENTRANT");
++  }
++
++public:
++  YaxTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
++      : OSTargetInfo<Target>(Triple, Opts) {
++    this->MCountName = "__mcount";
++  }
++};
++
+ // WASI target
+ template <typename Target>
+ class LLVM_LIBRARY_VISIBILITY WASITargetInfo
+--- llvm-project-13.0.1.src/clang/lib/Driver/CMakeLists.txt
++++ llvm-project-13.0.1.src-patched/clang/lib/Driver/CMakeLists.txt
+@@ -74,6 +74,7 @@
+   ToolChains/XCore.cpp
+   ToolChains/PPCLinux.cpp
+   ToolChains/InterfaceStubs.cpp
++  ToolChains/Yax.cpp
+   ToolChains/ZOS.cpp
+   Types.cpp
+   XRayArgs.cpp
+--- llvm-project-13.0.1.src/clang/lib/Driver/Driver.cpp
++++ llvm-project-13.0.1.src-patched/clang/lib/Driver/Driver.cpp
+@@ -46,6 +46,7 @@
+ #include "ToolChains/VEToolchain.h"
+ #include "ToolChains/WebAssembly.h"
+ #include "ToolChains/XCore.h"
++#include "ToolChains/Yax.h"
+ #include "ToolChains/ZOS.h"
+ #include "clang/Basic/TargetID.h"
+ #include "clang/Basic/Version.h"
+@@ -5343,6 +5344,9 @@
+       break;
+     case llvm::Triple::Contiki:
+       TC = std::make_unique<toolchains::Contiki>(*this, Target, Args);
++      break;
++    case llvm::Triple::Yax:
++      TC = std::make_unique<toolchains::Yax>(*this, Target, Args);
+       break;
+     case llvm::Triple::Hurd:
+       TC = std::make_unique<toolchains::Hurd>(*this, Target, Args);
+--- /dev/null
++++ llvm-project-13.0.1.src-patched/clang/lib/Driver/ToolChains/Yax.cpp
+@@ -0,0 +1,257 @@
++//===--- Yax.cpp - Yax ToolChain Implementations ---------------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#include "Yax.h"
++#include "CommonArgs.h"
++#include "clang/Driver/Compilation.h"
++#include "clang/Driver/Driver.h"
++#include "clang/Driver/Options.h"
++#include "clang/Driver/SanitizerArgs.h"
++#include "llvm/Option/ArgList.h"
++#include "llvm/Support/VirtualFileSystem.h"
++
++using namespace clang::driver;
++using namespace clang::driver::tools;
++using namespace clang::driver::toolchains;
++using namespace clang;
++using namespace llvm::opt;
++
++void yax::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
++                                  const InputInfo &Output,
++                                  const InputInfoList &Inputs,
++                                  const ArgList &Args,
++                                  const char *LinkingOutput) const {
++  claimNoWarnArgs(Args);
++  ArgStringList CmdArgs;
++
++  if (getToolChain().getArch() == llvm::Triple::x86)
++    CmdArgs.push_back("--32");
++
++  Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
++
++  CmdArgs.push_back("-o");
++  CmdArgs.push_back(Output.getFilename());
++
++  for (const auto &II : Inputs)
++    CmdArgs.push_back(II.getFilename());
++
++  const char *Exec = Args.MakeArgString((getToolChain().GetProgramPath("as")));
++  C.addCommand(std::make_unique<Command>(JA, *this,
++                                         ResponseFileSupport::AtFileCurCP(),
++                                         Exec, CmdArgs, Inputs, Output));
++}
++
++void yax::Linker::ConstructJob(Compilation &C, const JobAction &JA,
++                               const InputInfo &Output,
++                               const InputInfoList &Inputs,
++                               const ArgList &Args,
++                               const char *LinkingOutput) const {
++  const toolchains::Yax &ToolChain =
++    static_cast<const toolchains::Yax &>(getToolChain());
++  const Driver &D = ToolChain.getDriver();
++  ArgStringList CmdArgs;
++
++  if (!D.SysRoot.empty())
++    CmdArgs.push_back(Args.MakeArgString("--sysroot=" + D.SysRoot));
++
++  CmdArgs.push_back("--eh-frame-hdr");
++  CmdArgs.push_back("-Bstatic");
++  if (Args.hasArg(options::OPT_pie)) {
++    Args.AddAllArgs(CmdArgs, options::OPT_pie);
++    CmdArgs.push_back("--no-dynamic-linker");
++  }
++
++  if (ToolChain.getArch() == llvm::Triple::x86) {
++    CmdArgs.push_back("-m");
++    CmdArgs.push_back("elf_i386");
++  }
++
++  if (Output.isFilename()) {
++    CmdArgs.push_back("-o");
++    CmdArgs.push_back(Output.getFilename());
++  } else {
++    assert(Output.isNothing() && "Invalid output.");
++  }
++
++  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
++    if (!Args.hasArg(options::OPT_shared)) {
++      CmdArgs.push_back(
++          Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
++    }
++    CmdArgs.push_back(
++        Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
++    if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_pie)) {
++      CmdArgs.push_back(
++          Args.MakeArgString(ToolChain.GetFilePath("crtbeginS.o")));
++    } else {
++      CmdArgs.push_back(
++          Args.MakeArgString(ToolChain.GetFilePath("crtbegin.o")));
++    }
++  }
++
++  Args.AddAllArgs(CmdArgs, options::OPT_L);
++  Args.AddAllArgs(CmdArgs, options::OPT_T_Group);
++  Args.AddAllArgs(CmdArgs, options::OPT_e);
++  Args.AddAllArgs(CmdArgs, options::OPT_s);
++  Args.AddAllArgs(CmdArgs, options::OPT_t);
++  Args.AddAllArgs(CmdArgs, options::OPT_Z_Flag);
++  Args.AddAllArgs(CmdArgs, options::OPT_r);
++
++  bool NeedsSanitizerDeps = addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
++  bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
++  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
++
++  const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
++  if (SanArgs.needsSharedRt()) {
++    CmdArgs.push_back("-rpath");
++    CmdArgs.push_back(Args.MakeArgString(
++        ToolChain.getCompilerRTPath().c_str()));
++  }
++
++  unsigned Major, Minor, Micro;
++  ToolChain.getTriple().getOSVersion(Major, Minor, Micro);
++
++  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
++    // Use the static OpenMP runtime with -static-openmp
++    bool StaticOpenMP = Args.hasArg(options::OPT_static_openmp) &&
++                        !Args.hasArg(options::OPT_static);
++    addOpenMPRuntime(CmdArgs, getToolChain(), Args, StaticOpenMP);
++
++    if (D.CCCIsCXX()) {
++      if (ToolChain.ShouldLinkCXXStdlib(Args))
++        ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
++      CmdArgs.push_back("-lm");
++    }
++    if (NeedsSanitizerDeps)
++      linkSanitizerRuntimeDeps(getToolChain(), CmdArgs);
++    if (NeedsXRayDeps)
++      linkXRayRuntimeDeps(ToolChain, CmdArgs);
++    if (Args.hasArg(options::OPT_pthread))
++      CmdArgs.push_back("-lpthread");
++    CmdArgs.push_back("-lc");
++  }
++
++  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
++    if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_pie))
++      CmdArgs.push_back(
++          Args.MakeArgString(ToolChain.GetFilePath("crtendS.o")));
++    else
++      CmdArgs.push_back(
++          Args.MakeArgString(ToolChain.GetFilePath("crtend.o")));
++    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
++  }
++
++  ToolChain.addProfileRTLibs(Args, CmdArgs);
++
++  const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());
++  C.addCommand(std::make_unique<Command>(JA, *this,
++                                         ResponseFileSupport::AtFileCurCP(),
++                                         Exec, CmdArgs, Inputs, Output));
++}
++
++/// Yax - Yax tool chain which can call as(1) and ld(1) directly.
++
++Yax::Yax(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
++    : Generic_ELF(D, Triple, Args) {
++  if (!Args.hasArg(options::OPT_nostdlib)) {
++    switch (Triple.getArch()) {
++    case llvm::Triple::x86:
++      getFilePaths().push_back("=/lib/i686");
++      break;
++    case llvm::Triple::x86_64:
++      getFilePaths().push_back("=/lib/x86_64");
++      break;
++    default:
++      break;
++    }
++  }
++}
++
++Tool *Yax::buildAssembler() const {
++  return new tools::yax::Assembler(*this);
++}
++
++Tool *Yax::buildLinker() const { return new tools::yax::Linker(*this); }
++
++ToolChain::CXXStdlibType Yax::GetDefaultCXXStdlibType() const {
++  return ToolChain::CST_Libcxx;
++}
++
++void Yax::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
++                                    ArgStringList &CC1Args) const {
++  switch (getTriple().getArch()) {
++  case llvm::Triple::x86:
++    addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include/i386");
++    break;
++  case llvm::Triple::x86_64:
++    addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include/x86_64");
++    break;
++  default:
++    break;
++  }
++  addSystemInclude(DriverArgs, CC1Args, getDriver().SysRoot + "/include");
++}
++
++void Yax::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
++                                llvm::opt::ArgStringList &CC1Args) const {
++  const std::string Candidates[] = {
++    // directory relative to build tree
++    getDriver().Dir + "/../include/c++/v1",
++    // system install from src
++    getDriver().SysRoot + "/include/c++",
++  };
++
++  for (const auto &IncludePath : Candidates) {
++    if (!getVFS().exists(IncludePath + "/__config"))
++      continue;
++
++    // Use the first candidate that looks valid.
++    addSystemInclude(DriverArgs, CC1Args, IncludePath);
++    return;
++  }
++}
++
++llvm::ExceptionHandling Yax::GetExceptionModel(const ArgList &Args) const {
++  return llvm::ExceptionHandling::None;
++}
++
++SanitizerMask Yax::getSupportedSanitizers() const {
++  const bool IsX86 = getTriple().getArch() == llvm::Triple::x86;
++  const bool IsX86_64 = getTriple().getArch() == llvm::Triple::x86_64;
++  SanitizerMask Res = ToolChain::getSupportedSanitizers();
++  if (IsX86 || IsX86_64) {
++    Res |= SanitizerKind::Address;
++    Res |= SanitizerKind::PointerCompare;
++    Res |= SanitizerKind::PointerSubtract;
++    Res |= SanitizerKind::Function;
++    Res |= SanitizerKind::Leak;
++    Res |= SanitizerKind::SafeStack;
++    Res |= SanitizerKind::Scudo;
++    Res |= SanitizerKind::Vptr;
++  }
++  if (IsX86_64) {
++    Res |= SanitizerKind::DataFlow;
++    Res |= SanitizerKind::Fuzzer;
++    Res |= SanitizerKind::FuzzerNoLink;
++    Res |= SanitizerKind::HWAddress;
++    Res |= SanitizerKind::KernelAddress;
++    Res |= SanitizerKind::KernelHWAddress;
++    Res |= SanitizerKind::KernelMemory;
++    Res |= SanitizerKind::Memory;
++    Res |= SanitizerKind::Thread;
++  }
++  return Res;
++}
++
++void Yax::addClangTargetOptions(const ArgList &DriverArgs,
++                                ArgStringList &CC1Args,
++                                Action::OffloadKind) const {
++  const SanitizerArgs &SanArgs = getSanitizerArgs();
++  if (SanArgs.hasAnySanitizer())
++    CC1Args.push_back("-D_REENTRANT");
++}
+--- /dev/null
++++ llvm-project-13.0.1.src-patched/clang/lib/Driver/ToolChains/Yax.h
+@@ -0,0 +1,91 @@
++//===--- Yax.h - Yax ToolChain Implementations -----------------*- C++ -*-===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++
++#ifndef LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_YAX_H
++#define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_YAX_H
++
++#include "Gnu.h"
++#include "clang/Driver/Tool.h"
++#include "clang/Driver/ToolChain.h"
++
++namespace clang {
++namespace driver {
++namespace tools {
++
++/// yax -- Directly call GNU Binutils assembler and linker
++namespace yax {
++class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
++public:
++  Assembler(const ToolChain &TC) : Tool("yax::Assembler", "assembler", TC) {}
++
++  bool hasIntegratedCPP() const override { return false; }
++
++  void ConstructJob(Compilation &C, const JobAction &JA,
++                    const InputInfo &Output, const InputInfoList &Inputs,
++                    const llvm::opt::ArgList &TCArgs,
++                    const char *LinkingOutput) const override;
++};
++
++class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
++public:
++  Linker(const ToolChain &TC) : Tool("yax::Linker", "linker", TC) {}
++
++  bool hasIntegratedCPP() const override { return false; }
++  bool isLinkJob() const override { return true; }
++
++  void ConstructJob(Compilation &C, const JobAction &JA,
++                    const InputInfo &Output, const InputInfoList &Inputs,
++                    const llvm::opt::ArgList &TCArgs,
++                    const char *LinkingOutput) const override;
++};
++} // end namespace yax
++} // end namespace tools
++
++namespace toolchains {
++
++class LLVM_LIBRARY_VISIBILITY Yax : public Generic_ELF {
++public:
++  Yax(const Driver &D, const llvm::Triple &Triple,
++      const llvm::opt::ArgList &Args);
++
++  bool IsMathErrnoDefault() const override { return false; }
++  bool IsObjCNonFragileABIDefault() const override { return true; }
++
++  CXXStdlibType GetDefaultCXXStdlibType() const override;
++
++  void AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
++                                 llvm::opt::ArgStringList &CC1Args) const override;
++  void addLibCxxIncludePaths(
++      const llvm::opt::ArgList &DriverArgs,
++      llvm::opt::ArgStringList &CC1Args) const override;
++
++  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override {
++    return true;
++  }
++
++  llvm::ExceptionHandling GetExceptionModel(
++      const llvm::opt::ArgList &Args) const override;
++
++  SanitizerMask getSupportedSanitizers() const override;
++
++  const char *getDefaultLinker() const override { return "ld.lld"; }
++
++  void addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
++                             llvm::opt::ArgStringList &CC1Args,
++                             Action::OffloadKind DeviceOffloadKind) const override;
++
++protected:
++  Tool *buildAssembler() const override;
++  Tool *buildLinker() const override;
++};
++
++} // end namespace toolchains
++} // end namespace driver
++} // end namespace clang
++
++#endif // LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_YAX_H
+--- llvm-project-13.0.1.src/clang/lib/Frontend/InitHeaderSearch.cpp
++++ llvm-project-13.0.1.src-patched/clang/lib/Frontend/InitHeaderSearch.cpp
+@@ -233,6 +233,7 @@
+     case llvm::Triple::PS4:
+     case llvm::Triple::ELFIAMCU:
+     case llvm::Triple::Fuchsia:
++    case llvm::Triple::Yax:
+       break;
+     case llvm::Triple::Win32:
+       if (triple.getEnvironment() != llvm::Triple::Cygnus)
+@@ -342,6 +343,7 @@
+   case llvm::Triple::NaCl:
+   case llvm::Triple::ELFIAMCU:
+   case llvm::Triple::Fuchsia:
++  case llvm::Triple::Yax:
+     break;
+   case llvm::Triple::PS4: {
+     // <isysroot> gets prepended later in AddPath().
+--- llvm-project-13.0.1.src/llvm/include/llvm/ADT/Triple.h
++++ llvm-project-13.0.1.src-patched/llvm/include/llvm/ADT/Triple.h
+@@ -197,6 +197,7 @@
+     AMDPAL,     // AMD PAL Runtime
+     HermitCore, // HermitCore Unikernel/Multikernel
+     Hurd,       // GNU/Hurd
++    Yax,
+     WASI,       // Experimental WebAssembly OS
+     Emscripten,
+     LastOSType = Emscripten
+--- llvm-project-13.0.1.src/llvm/lib/Support/Triple.cpp
++++ llvm-project-13.0.1.src-patched/llvm/lib/Support/Triple.cpp
+@@ -222,6 +222,7 @@
+   case WASI: return "wasi";
+   case WatchOS: return "watchos";
+   case Win32: return "windows";
++  case Yax: return "yax";
+   case ZOS: return "zos";
+   }
+ 
+@@ -535,6 +536,7 @@
+     .StartsWith("contiki", Triple::Contiki)
+     .StartsWith("amdpal", Triple::AMDPAL)
+     .StartsWith("hermit", Triple::HermitCore)
++    .StartsWith("yax", Triple::Yax)
+     .StartsWith("hurd", Triple::Hurd)
+     .StartsWith("wasi", Triple::WASI)
+     .StartsWith("emscripten", Triple::Emscripten)

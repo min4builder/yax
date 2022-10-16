@@ -1,0 +1,10 @@
+rule qemu
+  command = qemu-system-$qemu_arch $qemu_opts
+  description = QEMU $in
+  pool = console
+
+build qemu: qemu $bindir/yax.bin | $bindir/initrd
+  qemu_opts = -serial stdio -kernel $bindir/yax.bin -initrd $bindir/initrd -hda /dev/zero
+
+build qemu-dbg: qemu $bindir/yax.bin | $bindir/initrd
+  qemu_opts = -serial stdio -kernel $bindir/yax.bin -initrd $bindir/initrd -hda /dev/zero -s -S

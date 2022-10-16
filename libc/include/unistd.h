@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-#if !defined(_UNISTD_H_POSIX) && _YALC_NEED_POSIX
+#if !defined(_UNISTD_H_POSIX)
 #define _UNISTD_H_POSIX
 
 #include <stdint.h>
@@ -19,6 +19,8 @@ extern "C" {
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
+
+#define _SC_PAGESIZE 4096
 
 _YALCDEFTYPE(mode_t);
 _YALCDEFTYPE(size_t);

@@ -73,11 +73,12 @@ static uint32_t elfload(uint8_t *buf, void **entryp, char *argv, char *envp)
 			memset((uint8_t *) addr + lsize, 0, size - lsize);
 			break;
 		}
-		case 0:
-		case 4:
-			break;
-		default:
+		case 2: /* PT_DYNAMIC */
+		case 3: /* PT_INTERP */
+		case 5: /* PT_SHLIB */
 			goto noexec;
+		default:
+			break;
 		}
 		ph += phs;
 	}

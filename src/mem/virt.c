@@ -40,7 +40,7 @@ void *vpgkmap(size_t len, enum mapprot prot)
 	pgs = pgfind(len, 0);
 	if(pgs == 0)
 		return ERR2PTR(-ENOMEM);
-	for(i = pgs; i < pgs + len; i += PGLEN) {
+	for(i = pgs; i < pgs + len + PGLEN-1; i += PGLEN) {
 		uintptr_t p = ppgalloc();
 		pgmap(i, pgemk(p, prot, 0, 0));
 	}
@@ -67,7 +67,7 @@ void *vpgumap(void *addr, size_t len, enum mapprot prot, enum mapflags flags)
 	printk(", ");
 	iprintk(flags);
 	printk(")\n");
-	for(i = pgs; i < pgs + len; i += PGLEN) {
+	for(i = pgs; i < pgs + len + PGLEN-1; i += PGLEN) {
 		Page *p = pagemk((uintptr_t) NOPHYSPG, prot, flags & MAP_NOSHARE);
 		pgmap(i, (uintptr_t) p | PGNOTMAPPED);
 		printk("i=");
@@ -101,7 +101,7 @@ void *vpgfmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, Co
 	printk(", ");
 	uxprintk(off);
 	printk(")\n");
-	for(i = pgs; i < pgs + len; i += PGLEN) {
+	for(i = pgs; i < pgs + len + PGLEN-1; i += PGLEN) {
 		if(flags & MAP_PRIVATE) {
 			Page *p = pagemk((uintptr_t) NOPHYSPG, prot, flags & MAP_NOSHARE);
 			p->c = c;
@@ -143,7 +143,7 @@ void *vpgpmap(void *addr, size_t len, enum mapprot prot, enum mapflags flags, ui
 		if(pgs == 0)
 			return ERR2PTR(-ENOMEM);
 	}
-	for(i = pgs; i < pgs + len; i += PGLEN) {
+	for(i = pgs; i < pgs + len + PGLEN-1; i += PGLEN) {
 		pgmap(i, pgemk(phys, prot, flags & MAP_NOSHARE, 1));
 	}
 	return (void *) pgs;
@@ -153,7 +153,7 @@ void vpgunmap(void *addr, size_t len)
 {
 	uintptr_t pgs = (uintptr_t) addr;
 	uintptr_t i;
-	for(i = pgs; i < pgs + len; i += PGLEN) {
+	for(i = pgs; i < pgs + len + PGLEN-1; i += PGLEN) {
 		uintptr_t p = pgunmap(i);
 		if(p) {
 			Page *vp = pmapget(p);

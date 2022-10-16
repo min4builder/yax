@@ -1,0 +1,6 @@
+build $libdir/crt0.o: as $here/crt0.s
+build $libdir/crti.o: as $here/crti.s
+build $libdir/crtn.o: as $here/crtn.s
+build $libdir/crtbegin.o: as $here/crtbegin.s
+build $libdir/crtend.o: as $here/crtend.s
+build crt: phony $libdir/crt0.o $libdir/crti.o $libdir/crtn.o $libdir/crtbegin.o $libdir/crtend.o

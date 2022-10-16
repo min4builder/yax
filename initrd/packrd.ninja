@@ -1,0 +1,4 @@
+rule mkinitrd
+  command = tar -cvf $out $in
+
+build $here/initrd: mkinitrd $bindir/cons $bindir/disk

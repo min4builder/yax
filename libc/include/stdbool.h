@@ -1,4 +1,4 @@
-#if !__bool_true_false_are_defined
+#ifndef __bool_true_false_are_defined
 #define __bool_true_false_are_defined
 
 #ifndef __cplusplus

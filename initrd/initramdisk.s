@@ -3,6 +3,6 @@ global initrdlen
 
 section .rodata
 initrd:
-	incbin "sf"
+	incbin "initrd/initrd"
 initrdlen dd $ - initrd
 

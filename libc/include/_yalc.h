@@ -74,8 +74,8 @@ _YALCTYPESZ(off_t, long long);
 _YALCTYPESZ(pid_t, long);
 _YALCTYPESZ(ptrdiff_t, long);
 _YALCTYPESZ(sig_atomic_t, volatile int);
-_YALCTYPESZ(size_t, unsigned long);
-_YALCTYPESZ(ssize_t, long);
+_YALCTYPESZ(size_t, unsigned int);
+_YALCTYPESZ(ssize_t, int);
 _YALCTYPESZ(time_t, unsigned long long);
 #ifndef __cplusplus
 #ifdef __WCHAR_TYPE__
